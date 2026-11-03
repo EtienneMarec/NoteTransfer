@@ -6,14 +6,14 @@ Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transf�
 - **Aucun mot de passe** n'est demandé ni stocké. Les cookies et jetons de session ne sont ni lus par l'extension, ni exportés, ni journalisés.
 - **Rien d'incertain n'est écrit sans votre accord**, et une note déjà présente n'est jamais écrasée par défaut.
 
-> **État : version 0.1, en développement.** Le parcours AlloCiné → SensCritique est complet. La lecture et la correspondance ont été vérifiées sur les vrais sites ; **aucune écriture réelle n'a encore été faite**. Voir [docs/verification.md](docs/verification.md).
+> **État : version 0.1, en développement.** Le parcours AlloCiné → SensCritique est complet et a été testé dans Firefox sur de vrais comptes : simulation complète et une première écriture réelle, vérifiée sur le site. Il n'a pas encore été testé dans Chrome, ni sur un transfert de plusieurs films. Voir [docs/verification.md](docs/verification.md).
 
 ## Plateformes
 
 | Plateforme | Source | Destination | Méthode | État |
 |---|---|---|---|---|
 | AlloCiné | ✅ | — | API interne du site, depuis un onglet AlloCiné | Lecture vérifiée sur le vrai site |
-| SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Lecture, recherche et note existante vérifiées ; écriture jamais exécutée |
+| SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Recherche, note existante et écriture vérifiées sur le vrai site (Firefox) ; la lecture comme source n'a été testée que par requête directe |
 | Letterboxd | prévu | prévu | Fichiers d'export et d'import officiels | Documenté |
 | IMDb | prévu | ✗ | Fichier d'export officiel (aucun import possible) | Documenté |
 | Trakt | prévu | prévu | API officielle (OAuth) | Documenté |
