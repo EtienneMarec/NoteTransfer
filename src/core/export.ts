@@ -85,6 +85,8 @@ function reasonOf(r: JobRow): string {
   return r.action ? ACTION_LABELS[r.action] : '';
 }
 
+const fr = (n: number) => n.toLocaleString('fr-FR');
+
 export function buildReport(job: TransferJob, rows: JobRow[], now = new Date()): BackupFiles {
   const lines = rows.map((r) => {
     const src = r.entry.rating;
@@ -93,9 +95,10 @@ export function buildReport(job: TransferJob, rows: JobRow[], now = new Date()):
       titre: r.entry.work.title,
       annee: r.entry.work.year,
       note_source: src ? formatRating(src.value, src.scale) : '',
-      note_convertie: r.conversion ? String(r.conversion.value) : '',
-      conversion: r.conversion && !r.conversion.exact ? `${r.conversion.raw} → ${r.conversion.value} (${r.conversion.rule})` : '',
-      note_existante: r.existing ? String(r.existing.value) : '',
+      // Même format décimal que note_source (virgule), pour un rapport cohérent.
+      note_convertie: r.conversion ? fr(r.conversion.value) : '',
+      conversion: r.conversion && !r.conversion.exact ? `${fr(r.conversion.raw)} → ${fr(r.conversion.value)} (${r.conversion.rule})` : '',
+      note_existante: r.existing ? fr(r.existing.value) : '',
       correspondance: r.match?.ref?.url ?? r.match?.ref?.id ?? '',
       confiance: r.match?.confidence ?? '',
       resultat: STATUS_LABELS[status],

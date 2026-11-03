@@ -93,6 +93,7 @@ Code exact de l'adaptateur et du moteur d'écriture, exécuté dans un onglet Al
 | Export IMDb réel → AlloCiné : 3/3 « sûr », 2 identiques ignorés, La Haine créée à 4/5 et vérifiée | ✅ |
 | Film avec critique | 🧪 refusé par l'adaptateur (non testé sur le site : il faudrait publier une critique) |
 | Requête de lecture réécrite (`MOVIES_RATED`) | ✅ toujours acceptée, 7 films |
+| **IMDb → AlloCiné dans l'extension chargée dans Firefox** (utilisateur, comptes de test) | ✅ rapport relu : « Clayface » (2026) créé à 4/5, enregistré et vérifié ; 3 notes identiques ignorées |
 
 ## Letterboxd et IMDb sur comptes de test (2026-11-03)
 
