@@ -80,6 +80,19 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | Comportement après expiration du jeton SensCritique | Non provoqué |
 | Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
 
+## Letterboxd et IMDb (fichiers) : fixtures synthétiques uniquement
+
+Aucun export réel n'a encore été fourni : les en-têtes viennent de la doc officielle de Letterboxd (import) et de sources tierces (exports).
+
+| Point | Tests | État |
+|---|---|---|
+| Lecteur CSV RFC 4180 et lecteur ZIP (stocké et deflate) | 5 | 🧪 |
+| Lecture de l'export IMDb | 5 | 🧪 synthétique |
+| Lecture de l'export Letterboxd (ZIP ou `ratings.csv`), génération du fichier d'import (échappement, IDs, découpage sous 1 Mo) | 9 | 🧪 synthétique |
+| Pipeline IMDb → Letterboxd et AlloCiné → Letterboxd, dédoublonnage | 3 | 🧪 |
+| Interface : choix du fichier, validation groupée, génération du fichier d'import | — | ⏳ compile, non testée dans Firefox |
+| Import réel sur letterboxd.com | — | ⏳ |
+
 ## Noyau (tests unitaires uniquement, aucun site impliqué)
 
 | Module | Tests | État |

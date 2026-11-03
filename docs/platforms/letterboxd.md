@@ -38,7 +38,16 @@ Source : <https://letterboxd.com/legal/terms-of-use/>
 - § 6.8 : export de contenu interdit, sauf ses propres publications.
 - Conséquence : la V1 utilise uniquement l'export et l'import officiels, sans appel réseau à letterboxd.com. Aucune `host_permission` n'est nécessaire.
 
+## Implémentation (`src/adapters/letterboxd`)
+
+- **Lecture** : l'utilisateur choisit le ZIP d'export, ouvert dans le navigateur avec `DecompressionStream`, ou `ratings.csv` seul. Les colonnes sont reconnues sans tenir compte de la casse ni de la ponctuation (`Name`, `Year`, `Letterboxd URI`, `Rating`, `Date`). L'URI `boxd.it` sert d'identifiant de ligne.
+- **Écriture** : fichier `letterboxd-import.csv` avec les colonnes `imdbID` et `tmdbID` (seulement si au moins une ligne en a), `Title` (titre original de préférence), `Year`, `Directors` et `Rating` (0,5–5). Les guillemets sont échappés par une barre oblique inverse, comme le demande la doc, et le fichier est découpé sous 1 Mo.
+- **Correspondance** : faite par l'importeur. Une ligne avec un ID IMDb ou TMDB est classée « sûr » ; sans ID, elle est classée « à vérifier » et décochée, et l'utilisateur doit la valider.
+- **Tests** : sur fixtures **synthétiques** uniquement (`__fixtures__/ratings.synthetic.csv`).
+
 ## Reste à vérifier
 
-1. Colonnes exactes de `ratings.csv`, à partir d'un export anonymisé.
+1. Colonnes exactes de `ratings.csv`, à partir d'un export réel anonymisé.
 2. Effet d'un import sur un film déjà noté.
+3. Réaction de l'importeur à une colonne `imdbID` vide sur certaines lignes (cas d'un mélange de films avec et sans ID).
+4. Un import réel du fichier généré, avec un ou deux films.

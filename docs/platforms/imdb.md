@@ -20,6 +20,13 @@
 - C'est la meilleure source possible : chaque ligne porte l'ID IMDb. Vers Letterboxd ou Trakt, la correspondance sera exacte.
 - Il faut confirmer les en-têtes sur un vrai export anonymisé. Ils ont changé au fil des années, avec par exemple un export asynchrone sur la page « Exports » ❓
 
+## Implémentation (`src/adapters/imdb`)
+
+- L'utilisateur choisit le CSV d'export. Les colonnes sont reconnues sans tenir compte de la casse ni de la ponctuation (`Const`, `Your Rating`, `Date Rated`, `Title`, `Original Title`, `Year`, `Runtime (mins)`, `Directors`, `Title Type`).
+- Seuls les types « Movie », « TV Movie » et « Video » sont gardés : les séries sont ignorées en V1.
+- L'ID `tt…` est conservé dans `externalIds.imdb` : la correspondance vers Letterboxd est donc exacte.
+- **Tests** : sur fixture **synthétique** uniquement (`__fixtures__/ratings.synthetic.csv`). Un export réel anonymisé est nécessaire pour confirmer les en-têtes.
+
 ## Écriture
 
 - Pas d'import officiel. RatS et les userscripts automatisent l'interface, ce que les CGU interdisent.
