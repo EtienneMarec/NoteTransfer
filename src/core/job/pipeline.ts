@@ -2,7 +2,7 @@ import type { AdapterContext, Candidate, PlatformAdapter, WorkQuery } from '../a
 import { isAbortError, PauseError } from '../errors';
 import { decideMatch } from '../match/score';
 import type { PivotEntry, PivotWork, PlatformRef } from '../pivot';
-import { planRow } from './plan';
+import { isWriteAction, planRow } from './plan';
 import { pauseInfo } from './runner';
 import { matchCacheKey, type JobStore } from './store';
 import type { JobRow, RowMatch, TransferJob } from './types';
@@ -97,6 +97,40 @@ export async function runReadStep(jobId: string, deps: PipelineDeps): Promise<Pi
   });
 }
 
+/** Source par fichier : les entrées déjà lues remplacent la phase de lecture. */
+export async function importEntries(store: JobStore, job: TransferJob, entries: PivotEntry[]): Promise<void> {
+  const seen = new Set<string>();
+  const rows: JobRow[] = [];
+  for (const entry of entries) {
+    if (entry.work.kind !== 'movie') continue;
+    const rowId = rowIdOf(entry);
+    if (seen.has(rowId)) continue; // une ligne par film, même si le fichier le répète
+    seen.add(rowId);
+    rows.push({ jobId: job.id, rowId, order: rows.length, entry, selected: false, status: 'pending', attempts: 0 });
+  }
+  await store.putRows(rows);
+  await store.putJob({ ...job, phase: 'matching', readCursor: null, readTotal: rows.length, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Destination par fichier : c'est l'importeur de la plateforme qui rapprochera les films.
+ * Avec un ID externe qu'il sait lire, le rapprochement est exact ; sinon il se fera par titre et année,
+ * et la ligne doit être validée par l'utilisateur.
+ */
+function fileMatch(destination: PlatformAdapter, row: JobRow): RowMatch {
+  const ids = destination.capabilities.lookupByExternalId.filter((k) => row.entry.work.externalIds[k] !== undefined);
+  const ref: PlatformRef = { platform: destination.id, id: 'fichier-import' };
+  return ids.length
+    ? { confidence: 'sure', ref, reason: `${destination.displayName} rapprochera par identifiant ${ids.join('/').toUpperCase()}`, candidates: [], confirmedByUser: false }
+    : {
+        confidence: 'review',
+        ref,
+        reason: `${destination.displayName} rapprochera par titre et année : vérifiez son récapitulatif avant de confirmer`,
+        candidates: [],
+        confirmedByUser: false,
+      };
+}
+
 async function plan(deps: PipelineDeps, job: TransferJob, row: JobRow): Promise<JobRow> {
   const p = planRow({
     row,
@@ -123,6 +157,11 @@ export async function runMatchStep(jobId: string, deps: PipelineDeps): Promise<P
     // Pas de note source : inutile d'interroger la destination.
     if (!row.entry.rating) {
       await store.putRows([await plan(deps, job, { ...row, match: { confidence: 'not_found', reason: 'pas de note source', candidates: [], confirmedByUser: false } })]);
+      return 'progressed' as const;
+    }
+
+    if (destination.capabilities.write === 'file') {
+      await store.putRows([await plan(deps, job, { ...row, match: fileMatch(destination, row), existing: null })]);
       return 'progressed' as const;
     }
 
@@ -236,6 +275,25 @@ export async function setRowSelected(store: JobStore, jobId: string, rowId: stri
   }
   await store.putRows([next]);
   return next;
+}
+
+/** Coche ou décoche plusieurs lignes (ex. « valider toutes les lignes affichées »). */
+export async function setRowsSelected(store: JobStore, jobId: string, rowIds: string[], selected: boolean): Promise<void> {
+  for (const rowId of rowIds) await setRowSelected(store, jobId, rowId, selected);
+}
+
+/** Destination par fichier : les lignes cochées sont incluses dans le fichier d'import généré. */
+export async function completeFileExport(store: JobStore, jobId: string, fileNames: string[], now = new Date()): Promise<void> {
+  const job = await store.getJob(jobId);
+  if (!job || job.phase !== 'review') throw new Error('Export impossible dans cet état');
+  const rows = await store.getRows(jobId);
+  const message = `incluse dans ${fileNames.join(', ')} : à importer sur le site`;
+  await store.putRows(
+    rows
+      .filter((r) => r.selected && isWriteAction(r.action))
+      .map((r) => ({ ...r, status: 'done' as const, outcome: { at: now.toISOString(), message, verified: false } })),
+  );
+  await store.putJob({ ...job, phase: 'done', updatedAt: now.toISOString() });
 }
 
 /** Applique une politique de conflit à toutes les lignes en conflit. */
