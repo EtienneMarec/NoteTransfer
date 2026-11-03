@@ -277,6 +277,40 @@ export async function setRowSelected(store: JobStore, jobId: string, rowId: stri
   return next;
 }
 
+/**
+ * Destination par fichier : l'importeur peut écraser une note existante sans prévenir (vérifié sur Letterboxd).
+ * Avec l'export actuel de la destination, on retrouve les notes déjà présentes et on applique la règle
+ * de conflit habituelle. Seules les correspondances « sûres » sont prises en compte.
+ */
+export async function applyDestinationExport(
+  deps: Pick<PipelineDeps, 'store' | 'destination'>,
+  jobId: string,
+  existingEntries: PivotEntry[],
+): Promise<{ matched: number }> {
+  const { store, destination } = deps;
+  const job = await store.getJob(jobId);
+  if (!job || job.phase !== 'review' || destination.capabilities.write !== 'file') throw new Error('Opération impossible dans cet état');
+  const candidates: Array<Candidate & { rating: PivotEntry['rating'] }> = existingEntries
+    .filter((e) => e.rating)
+    .map((e) => ({ ref: e.work.refs[0] ?? { platform: destination.id, id: e.work.title }, work: e.work, rating: e.rating }));
+
+  let matched = 0;
+  const rows = await store.getRows(jobId);
+  const updated = rows.map((row) => {
+    const d = decideMatch(queryOf(row.entry.work), candidates);
+    const hit = d.confidence === 'sure' ? candidates.find((c) => c === d.best?.candidate) : undefined;
+    if (hit) matched++;
+    const existing = hit?.rating ? { value: hit.rating.value, scale: hit.rating.scale } : null;
+    const p = planRow({ row: { ...row, existing }, destinationScale: destination.capabilities.scale, rounding: job.rounding, conflictPolicy: job.conflictPolicy });
+    // Une ligne déjà validée par l'utilisateur reste cochée si elle n'est pas devenue un conflit.
+    const keepSelection = row.selected && (p.action === 'create' || p.action === 'overwrite');
+    return { ...row, existing, ...p, selected: p.selected || keepSelection };
+  });
+  await store.putRows(updated);
+  await store.putJob({ ...job, destinationExportAppliedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  return { matched };
+}
+
 /** Coche ou décoche plusieurs lignes (ex. « valider toutes les lignes affichées »). */
 export async function setRowsSelected(store: JobStore, jobId: string, rowIds: string[], selected: boolean): Promise<void> {
   for (const rowId of rowIds) await setRowSelected(store, jobId, rowId, selected);

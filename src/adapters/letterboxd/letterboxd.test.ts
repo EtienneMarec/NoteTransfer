@@ -2,11 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { makeZip } from '../../core/files/make-zip.testutil';
 import { parseCsv } from '../../core/files/csv';
 import type { PivotWork } from '../../core/pivot';
-// Fixture SYNTHÉTIQUE : colonnes d'après des sources tierces, contenu inventé. À remplacer par un export réel anonymisé.
+// Export RÉEL d'un compte de test (2026-11-03) : seul ratings.csv est conservé, sans profil.
+import realCsv from './__fixtures__/ratings.real.csv?raw';
+// Fixture SYNTHÉTIQUE au même format, pour un titre contenant une virgule.
 import fixture from './__fixtures__/ratings.synthetic.csv?raw';
 import { buildLetterboxdImport, letterboxd, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseLetterboxdRatings } from './index';
 
 const work = (w: Partial<PivotWork> & { title: string }): PivotWork => ({ kind: 'movie', externalIds: {}, refs: [], ...w });
+
+describe('parseLetterboxdRatings (export réel d’un compte de test)', () => {
+  it('lit ratings.csv tel que Letterboxd l’exporte', () => {
+    const entries = parseLetterboxdRatings(realCsv, '');
+    expect(entries.map((e) => [e.work.title, e.work.year, e.rating?.value])).toEqual([
+      ['Men in Black II', 2002, 4],
+      ['American History X', 1998, 4.5],
+      ['Despicable Me', 2010, 2.5],
+      ['Breathless', 1960, 3.5],
+      ['Forrest Gump', 1994, 3],
+      ['The Blair Witch Project', 1999, 5],
+      ['La Haine', 1995, 4],
+    ]);
+    expect(entries[6]!.work.refs[0]).toEqual({ platform: 'letterboxd', id: 'https://boxd.it/2as8', url: 'https://boxd.it/2as8' });
+    expect(entries[6]!.rating?.ratedAt).toBe('2026-11-04');
+  });
+});
 
 describe('parseLetterboxdRatings', () => {
   it('lit ratings.csv : titre, année, URI, note sur 5 et date', () => {

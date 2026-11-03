@@ -55,7 +55,12 @@ Source : <https://letterboxd.com/legal/terms-of-use/>
 - L'importeur prévient que « Titles will be marked as watched » : c'est indiqué dans `writeSideEffects`.
 - **Letterboxd affiche une vérification anti-robot (« Security check ») à une session automatisée**, et pas à l'utilisateur. Je n'ai pas cherché à la contourner : la confirmation de l'import a été laissée à l'utilisateur. C'est cohérent avec le choix de ne jamais automatiser le site.
 
+- Import confirmé par l'utilisateur : les 7 notes ont été enregistrées ✅
+- **Un second import remplace la note existante sans aucun avertissement** ✅ : Men in Black II est passé de 3 à 4.
+  - Parade : dans l'aperçu, l'utilisateur peut fournir son export Letterboxd actuel. Les notes déjà présentes sont alors retrouvées par titre et année (correspondances « sûres » uniquement), puis traitées comme des conflits, donc conservées par défaut.
+  - Limite : un film dont le titre Letterboxd diffère trop du titre source (« Breathless » pour « À bout de souffle ») n'est pas reconnu.
+- **Export réel** (ZIP) : `ratings.csv` contient exactement `Date,Name,Year,Letterboxd URI,Rating`. `Name` est le titre affiché par Letterboxd, souvent anglais. `Date` est la date d'import, pas celle du visionnage. Le ZIP contient aussi `watched.csv`, `diary.csv`, `profile.csv` (données personnelles, jamais lu), etc. Seul `ratings.csv` est conservé en fixture (`__fixtures__/ratings.real.csv`).
+
 ## Reste à vérifier
 
-1. Colonnes exactes de `ratings.csv`, à partir d'un export réel.
-2. Effet d'un import sur un film déjà noté.
+1. Un export plus gros (pagination éventuelle, notes sans film « vu »).

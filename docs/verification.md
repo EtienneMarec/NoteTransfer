@@ -80,9 +80,20 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | Comportement après expiration du jeton SensCritique | Non provoqué |
 | Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
 
-## Letterboxd et IMDb (fichiers) : fixtures synthétiques uniquement
+## Letterboxd et IMDb sur comptes de test (2026-11-03)
 
-Aucun export réel n'a été fourni, car l'utilisateur n'a de compte ni Letterboxd ni IMDb. Les en-têtes viennent de la doc officielle de Letterboxd pour l'import et de sources tierces pour les exports : [guide IMDb → Hugo](https://jcktrue.dk/project/imdb-to-hugo-md/) et [importeur IMDb (Greasy Fork)](https://greasyfork.org/en/scripts/463836-imdb-ratings-importer/discussions/183933) pour IMDb, [analyse de données Letterboxd](https://julianegerez.github.io/blog/2023/06/11/Letterboxd) pour Letterboxd. Ces sources confirment les noms de colonnes, pas leur ordre exact. Pour limiter le risque, les lecteurs n'exigent que le strict minimum (`Const` et `Your Rating` pour IMDb, `Name` et `Rating` pour Letterboxd) et retrouvent les colonnes par leur nom, quel que soit leur ordre.
+| Point | Résultat |
+|---|---|
+| Export IMDb réel (interface en français) | ✅ en-têtes confirmés ; **bug trouvé et corrigé** : « Title Type » vaut « Film », que l'ancien filtre anglais rejetait |
+| Fichier d'import Letterboxd généré par l'adaptateur | ✅ 7/7 films correctement rapprochés par l'importeur, `imdbID` vide accepté ; import confirmé par l'utilisateur |
+| Second import Letterboxd sur une note existante | ✅ remplacement **silencieux** constaté : parade ajoutée (export de la destination dans l'aperçu) |
+| Export Letterboxd réel (ZIP) | ✅ `ratings.csv` = `Date,Name,Year,Letterboxd URI,Rating`, comme supposé |
+| Détection des notes existantes à partir de l'export Letterboxd réel | 🧪 testée sur cet export réel : 5/6 films AlloCiné reconnus, « À bout de souffle » / « Breathless » non reconnu |
+| Ces parcours dans l'extension chargée dans Firefox | ⏳ |
+
+### Historique : avant les comptes de test
+
+Aucun export réel n'avait été fourni, car l'utilisateur n'avait de compte ni Letterboxd ni IMDb. Les en-têtes viennent de la doc officielle de Letterboxd pour l'import et de sources tierces pour les exports : [guide IMDb → Hugo](https://jcktrue.dk/project/imdb-to-hugo-md/) et [importeur IMDb (Greasy Fork)](https://greasyfork.org/en/scripts/463836-imdb-ratings-importer/discussions/183933) pour IMDb, [analyse de données Letterboxd](https://julianegerez.github.io/blog/2023/06/11/Letterboxd) pour Letterboxd. Ces sources confirment les noms de colonnes, pas leur ordre exact. Pour limiter le risque, les lecteurs n'exigent que le strict minimum (`Const` et `Your Rating` pour IMDb, `Name` et `Rating` pour Letterboxd) et retrouvent les colonnes par leur nom, quel que soit leur ordre.
 
 | Point | Tests | État |
 |---|---|---|

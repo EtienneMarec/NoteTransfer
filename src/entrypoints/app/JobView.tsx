@@ -21,6 +21,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
   const [state, setState] = useState<Responses['getJob']>();
   const [error, setError] = useState<string>();
   const [tick, setTick] = useState(0);
+  const [exportInfo, setExportInfo] = useState<string>();
   const refresh = () => setTick((t) => t + 1);
 
   useEffect(() => {
@@ -57,6 +58,20 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
     download(`${base}.json`, b.json, 'application/json');
     download(`${base}.csv`, b.csv, 'text/csv;charset=utf-8');
     act(send({ type: 'markBackupSaved', jobId }));
+  }
+
+  async function applyExport(f: File | undefined) {
+    if (!f || !dst.parseExport) return;
+    setExportInfo(undefined);
+    setError(undefined);
+    try {
+      const entries = await dst.parseExport({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
+      const { matched } = await send({ type: 'applyDestinationExport', jobId, entries });
+      setExportInfo(`${matched} film(s) déjà noté(s) sur ${dst.displayName} retrouvé(s) parmi ${entries.filter((e) => e.rating).length} note(s) de l’export.`);
+      refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
   }
 
   function downloadImport() {
@@ -167,6 +182,23 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
               Les lignes « à vérifier » seront rapprochées par {dst.displayName} sur le titre et l’année : cochez celles que vous voulez inclure
               (filtre « À vérifier », puis « Valider les lignes affichées »).
             </p>
+            {dst.parseExport && (
+              <div class={`notice ${job.destinationExportAppliedAt ? 'ok' : 'warn'}`}>
+                <p>
+                  <strong>Notes déjà présentes sur {dst.displayName}.</strong> Son importeur remplace une note existante sans prévenir. Ajoutez votre
+                  export {dst.displayName} actuel pour les retrouver : elles seront conservées, sauf choix contraire. Seules les correspondances
+                  sûres (titre et année) sont reconnues, et un film traduit différemment peut échapper à la détection.
+                </p>
+                <p class="muted small">{dst.exportInstructions}</p>
+                <input
+                  type="file"
+                  accept={dst.exportFileTypes}
+                  aria-label={`Export ${dst.displayName} actuel`}
+                  onChange={(e) => void applyExport((e.target as HTMLInputElement).files?.[0])}
+                />
+                {exportInfo && <p>{exportInfo}</p>}
+              </div>
+            )}
             <div class="row">
               <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
               <button class="primary" disabled={!toWrite.length} onClick={generateImport}>

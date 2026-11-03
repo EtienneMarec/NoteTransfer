@@ -22,6 +22,7 @@ export type Request =
     }
   | { type: 'setRowsSelected'; jobId: string; rowIds: string[]; selected: boolean }
   | { type: 'completeFileExport'; jobId: string; fileNames: string[] }
+  | { type: 'applyDestinationExport'; jobId: string; entries: PivotEntry[] }
   | { type: 'listJobs' }
   | { type: 'getJob'; jobId: string }
   | { type: 'pause'; jobId: string }
@@ -45,6 +46,7 @@ export interface Responses {
   createJob: { jobId: string };
   setRowsSelected: true;
   completeFileExport: true;
+  applyDestinationExport: { matched: number };
   listJobs: TransferJob[];
   getJob: { job: TransferJob; rows: JobRow[]; active: boolean } | null;
   pause: boolean;

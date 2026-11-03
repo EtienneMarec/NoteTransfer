@@ -7,12 +7,13 @@ import imdbCsv from '../../adapters/imdb/__fixtures__/ratings.synthetic.csv?raw'
 import { parseImdbRatings } from '../../adapters/imdb';
 import { allocine } from '../../adapters/allocine';
 import { imdb } from '../../adapters/imdb';
-import { letterboxd } from '../../adapters/letterboxd';
+import { letterboxd, parseLetterboxdRatings } from '../../adapters/letterboxd';
+import lbRealCsv from '../../adapters/letterboxd/__fixtures__/ratings.real.csv?raw';
 import type { AdapterContext } from '../adapter';
 import { buildReport, summarize } from '../export';
 import { parseCsv } from '../files/csv';
 import { silentLogger } from '../log';
-import { completeFileExport, importEntries, newJob, runMatchStep, setRowsSelected } from './pipeline';
+import { applyDestinationExport, completeFileExport, importEntries, newJob, runMatchStep, setRowsSelected } from './pipeline';
 import { openJobStore, type JobStore } from './store';
 
 const ctx: AdapterContext = {
@@ -86,6 +87,28 @@ describe('AlloCiné → Letterboxd (fichier)', () => {
     await completeFileExport(store, jobId, [file!.name]);
     const report = buildReport((await store.getJob(jobId))!, await store.getRows(jobId));
     expect(report.csv).toContain('incluse dans letterboxd-import.csv');
+  });
+
+  it('retrouve les notes déjà sur Letterboxd grâce à son export, pour ne pas les écraser', async () => {
+    const entries = [page1, page2].flatMap((p) => parseMoviesRated(p.data as MoviesRatedResponse, '').items);
+    const jobId = await prepare(allocine, entries);
+    await setRowsSelected(store, jobId, (await store.getRows(jobId)).map((r) => r.rowId), true);
+
+    // Export réel du compte de test, après deux imports (MIIB passé à 4 par le second).
+    const existing = parseLetterboxdRatings(lbRealCsv, '');
+    const { matched } = await applyDestinationExport({ store, destination: letterboxd }, jobId, existing);
+    const view = Object.fromEntries((await store.getRows(jobId)).map((r) => [r.entry.work.title, `${r.action}/${r.selected}`]));
+    expect(view).toEqual({
+      MIIB: 'skip_conflict/false', // 3/5 sur AlloCiné, 4 sur Letterboxd : conservée
+      'American History X': 'skip_identical/false',
+      'Moi, moche et méchant': 'skip_identical/false', // trouvé par le titre original « Despicable Me »
+      // « Breathless » sur Letterboxd : titre trop différent, aucune note existante détectée.
+      'À bout de souffle': 'create/true',
+      'Forrest Gump': 'skip_identical/false',
+      'Le Projet Blair Witch': 'skip_identical/false',
+    });
+    expect(matched).toBe(5);
+    expect((await store.getJob(jobId))?.destinationExportAppliedAt).toBeDefined();
   });
 
   it('dédoublonne un film répété dans le fichier source', async () => {

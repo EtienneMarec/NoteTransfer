@@ -32,6 +32,8 @@ export interface TransferJob {
   testBatchSize: number;
   testBatchConfirmed: boolean;
   backupSavedAt?: string;
+  /** Destination par fichier : export actuel de la destination pris en compte (notes existantes). */
+  destinationExportAppliedAt?: string;
   pause?: {
     kind: PauseError['kind'] | 'user';
     message: string;

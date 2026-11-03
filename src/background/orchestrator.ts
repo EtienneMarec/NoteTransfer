@@ -3,6 +3,7 @@ import type { AdapterContext, PlatformAdapter, SessionStatus } from '../core/ada
 import { isAbortError, PauseError } from '../core/errors';
 import { createHttpClient, DEFAULT_POLICY } from '../core/http/client';
 import {
+  applyDestinationExport,
   completeFileExport,
   importEntries,
   newJob,
@@ -213,6 +214,10 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
     case 'completeFileExport':
       await locked(() => completeFileExport(store, req.jobId, req.fileNames));
       return true;
+    case 'applyDestinationExport': {
+      const { destination } = await reviewDeps(req.jobId);
+      return locked(() => applyDestinationExport({ store, destination }, req.jobId, req.entries));
+    }
     case 'listJobs':
       return (await store.listJobs()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     case 'getJob': {

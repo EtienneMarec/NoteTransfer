@@ -11,7 +11,8 @@ export const MAX_IMPORT_BYTES = 950_000;
 export const MAX_IMPORT_ROWS = 1_900;
 
 // ---- Lecture : export officiel (ZIP ou ratings.csv) -------------------------------------
-// Colonnes attendues (source tierce, à confirmer sur un export réel) : Date, Name, Year, Letterboxd URI, Rating.
+// Colonnes vérifiées sur un export réel (2026-11-03) : Date, Name, Year, Letterboxd URI, Rating.
+// « Name » est le titre affiché par Letterboxd (souvent anglais : « Breathless » pour « À bout de souffle »).
 
 export function parseLetterboxdRatings(text: string, fetchedAt: string): PivotEntry[] {
   const { columns, records } = csvRecords(text);
@@ -114,7 +115,7 @@ export const letterboxd: PlatformAdapter = {
     lookupByExternalId: ['imdb', 'tmdb'],
     notes: 'Par les fichiers officiels d’export et d’import. Aucune requête n’est envoyée à Letterboxd.',
     writeSideEffects:
-      'Letterboxd fait lui-même le rapprochement des films et ne documente pas ce qu’il fait d’une note déjà présente. ' +
+      'Letterboxd fait lui-même le rapprochement des films et remplace sans prévenir une note déjà présente. ' +
       'Les films importés sont aussi marqués comme vus. Vérifiez son récapitulatif avant de confirmer : l’import ne peut pas être annulé. ' +
       'L’importeur est normalement réservé aux membres Pro (ouvert à tous pour une durée limitée en novembre 2026).',
   },
