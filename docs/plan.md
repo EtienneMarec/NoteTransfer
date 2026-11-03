@@ -195,7 +195,7 @@ export interface PlatformAdapter {
 
 | Plateforme | read | write | Échelle | IDs fournis |
 |---|---|---|---|---|
-| AlloCiné | `site` | `site` | 0,5–5 / 0,5 | — |
+| AlloCiné | `site` | — en V1 (effet sur les critiques à vérifier) | 0,5–5 / 0,5 | — |
 | SensCritique | `site` | `site` | 1–10 / 1 | — |
 | Letterboxd | `file` | `file` | 0,5–5 / 0,5 | — (import : imdb, tmdb) |
 | IMDb | `file` | — | 1–10 / 1 | imdb |
