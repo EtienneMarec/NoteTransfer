@@ -6,7 +6,7 @@
 
 | # | Plateforme | Point | Proposition |
 |---|---|---|---|
-| B1 | AlloCiné | CGU art. 7.5 et 8.1 : toute extraction automatisée est interdite, même minime. Risque : suspension du compte (art. 9) | Deux modes au choix. **(a)** Lecture via l'API interne, lente, avec avertissement explicite et accord de l'utilisateur. **(b)** Import de l'export RGPD obtenu auprès du DPO de Webedia (format inconnu). Recommandation : prévoir (a) pour la V1, avec un avertissement bloquant à accepter, et ajouter (b) dès qu'un export réel est disponible |
+| B1 | AlloCiné | CGU art. 7.5 et 8.1 : toute extraction automatisée est interdite, même minime. Risque : suspension du compte (art. 9) | **Décidé le 2026-11-03 : (a)**. Lecture via l'API interne, lente, après un avertissement bloquant qui cite les articles et que l'utilisateur doit accepter explicitement. L'accord est mémorisé localement et révocable. L'import de l'export RGPD (b) reste une piste pour plus tard |
 | B2 | AlloCiné, SensCritique | Les deux API GraphQL sont internes et non documentées. Elles peuvent changer sans préavis | Requêtes minimales, version de schéma testée, détection d'erreur `GRAPHQL_VALIDATION_FAILED` qui met le transfert en pause avec le message « l'adaptateur doit être mis à jour » |
 | B3 | AlloCiné → SensCritique | Aucun des deux sites n'expose d'ID IMDb ou TMDB | Correspondance par titre FR, titre original, année, réalisateur et durée. Une clé TMDB optionnelle n'aide que marginalement ici (voir § 5) |
 | B4 | IMDb | CGU : robots et scraping interdits, pas d'import officiel | IMDb en source **par fichier uniquement**, jamais en destination |
