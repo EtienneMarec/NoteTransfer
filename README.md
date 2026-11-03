@@ -12,7 +12,7 @@ Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transf�
 
 | Plateforme | Source | Destination | Méthode | État |
 |---|---|---|---|---|
-| AlloCiné | ✅ | — | API interne du site, depuis un onglet AlloCiné | Lecture vérifiée sur le vrai site |
+| AlloCiné | ✅ | ✅ | API interne du site, depuis un onglet AlloCiné | Lecture vérifiée sur le vrai site ; recherche et écriture vérifiées sur un compte de test (hors extension chargée) |
 | SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Recherche, note existante et écriture vérifiées sur le vrai site (Firefox) ; la lecture comme source n'a été testée que par requête directe |
 | Letterboxd | ✅ | ✅ | Fichiers officiels : export (ZIP ou `ratings.csv`) en entrée, fichier pour l'importeur en sortie | Export réel lu ; fichier généré importé avec succès sur un compte de test |
 | IMDb | ✅ | ✗ | Fichier CSV d'export officiel (IMDb ne permet aucun import) | Export réel lu (compte de test) |

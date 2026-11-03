@@ -10,7 +10,8 @@
 | API officielle | Aucune API publique documentée |
 | Endpoint | `POST https://graph.allocine.fr/v1/public` ✅ |
 | Lecture des notes | `GetMoviesSeen` → `me.user.social.relatedEntities.movies(action: [OPINION])`, pagination par curseur ✅ **testée connecté** |
-| Écriture des notes | `AddOpinion` / `UpdateOpinion` (texte exact relevé ✅, ❓ jamais exécutées) |
+| Écriture des notes | `addUserOpinion` (crée ou remplace) ✅ **testée sur un compte de test** |
+| Recherche | `search(text, types: [Movie], first)` ✅ |
 | Authentification | En-tête `Authorization: Bearer <valeur du cookie GraphToken>` ✅ |
 | Échelle | 0,5 à 5, pas de 0,5 (✅ `rating(base: 5)` renvoie 2.5, 3.0, 4.5…) |
 | Identifiants externes | Aucun ID IMDb/TMDB exposé. ID interne `Movie:<cfilm>` et identifiant EIDR dans le JSON-LD (✅) |
@@ -115,11 +116,20 @@ Source : <https://www.allocine.fr/service/conditions.html> (mise à jour du 16/0
 
 **Alternative conforme** : demander à Webedia l'export RGPD de ses données, puis l'importer dans l'extension avec un adaptateur « fichier ». Le format de cet export est inconnu ❓
 
+## AlloCiné comme destination (vérifié sur un compte de test, 2026-11-03)
+
+- **Recherche** : `search(text: String!, types: [Movie], first: Int)` sur `graph.allocine.fr` renvoie un `searchResultsConnection` dont les nœuds `SearchResult { score node { … on Movie } }` donnent les mêmes champs que la liste des notes ✅. Le schéma a été découvert grâce aux messages de validation, sans rien exécuter. Le bon film n'est pas toujours en tête : MIIB arrive 4e pour « Men in Black II », d'où `first: 10`. Fixture : `__fixtures__/search-men-in-black-ii.json`.
+- **Fiche** : `movie(internalId: Int)` (ou `id: String`) ✅, utilisée pour corriger une correspondance à partir d'une URL collée.
+- **Note existante** : `me.user.social.entities(entity: [base64("Movie:<id>")], action: [OPINION])` → `opinion.content { rating(base: 5) review }` ✅
+- **Écriture**, testée sur La Haine :
+  - `addUserOpinion(input: {id_entity, rating})` crée la note. Appelée sur un film déjà noté, elle **remplace** la note sans doublon ✅. L'opération est donc idempotente.
+  - `updateUserOpinion` modifie aussi la note ✅. `deleteUserOpinion` la supprime ✅.
+  - **Une note invalide (3,3) est arrondie en silence (→ 3)** ✅ : l'adaptateur refuse localement toute note qui n'est pas un multiple de 0,5.
+  - Le site interroge `GET mon.allocine.fr/_/maintenance/social` avant toute mutation, et l'adaptateur fait de même.
+- **Critiques** : l'effet d'une mutation sans `review` sur une critique existante n'a pas été testé, car cela suppose de publier une critique publique. Par prudence, **l'adaptateur ne modifie jamais un film qui a une critique** et l'indique dans le rapport.
+- **Bout en bout** : export IMDb réel → AlloCiné avec le vrai adaptateur et le vrai moteur d'écriture. Les 3 films sont rapprochés de façon « sûre » ; 2 notes identiques sont ignorées, et La Haine (8/10 → 4/5) est **créée, relue et vérifiée** ✅
+
 ## Reste à vérifier
 
-1. ~~URL et authentification~~ ✅
-2. ~~Liste complète paginée~~ ✅
-3. ~~Titre original, année, réalisateur, durée~~ ✅
-4. Comportement de `updateUserOpinion` vis-à-vis d'une critique existante (seulement si AlloCiné sert de destination).
-5. Taille de page maximale sur un gros compte.
-6. Réponse quand le jeton a expiré (401 ou erreur GraphQL ?).
+1. Taille de page maximale sur un gros compte.
+2. Réponse quand le jeton a expiré : sans jeton, c'est un 401 `JWT Token not found` ✅ ; un jeton expiré n'a pas été testé.

@@ -80,6 +80,20 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | Comportement après expiration du jeton SensCritique | Non provoqué |
 | Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
 
+## AlloCiné comme destination, compte de test (2026-11-03)
+
+Code exact de l'adaptateur et du moteur d'écriture, exécuté dans un onglet AlloCiné connecté au compte de test (l'extension n'était pas chargée).
+
+| Point | Résultat |
+|---|---|
+| `search(types: [Movie])` | ✅ schéma découvert par validation, résultats corrects (fixture réelle) |
+| `movie(internalId)`, note existante avec `review` | ✅ |
+| `addUserOpinion` : création, remplacement idempotent ; `updateUserOpinion` ; `deleteUserOpinion` | ✅ |
+| Note invalide arrondie en silence par AlloCiné | ✅ constaté, désormais refusé localement |
+| Export IMDb réel → AlloCiné : 3/3 « sûr », 2 identiques ignorés, La Haine créée à 4/5 et vérifiée | ✅ |
+| Film avec critique | 🧪 refusé par l'adaptateur (non testé sur le site : il faudrait publier une critique) |
+| Requête de lecture réécrite (`MOVIES_RATED`) | ✅ toujours acceptée, 7 films |
+
 ## Letterboxd et IMDb sur comptes de test (2026-11-03)
 
 | Point | Résultat |
