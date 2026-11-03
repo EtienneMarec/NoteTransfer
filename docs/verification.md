@@ -48,11 +48,22 @@ Requêtes **exactes** des fichiers `src/adapters/*/queries.ts` et fonction `fetc
 | SensCritique `PRODUCT_RATE` | ✅ document **validé par le schéma sans exécution** (variable volontairement invalide → `BAD_USER_INPUT`) |
 | **Simulation de correspondance** : 6 films AlloCiné (fixtures réelles) → `senscritique.searchFilm` + `decideMatch` + `getExistingRating` + `planRow` réels | ✅ 6/6 « sûr » et corrects (MIIB retrouvé via « Men in Black II » ; American History X à 1998/1999 confirmé par le réalisateur) ; 4 conflits conservés, 2 notes identiques, **0 écriture prévue** |
 
+## Extension chargée dans Firefox, simulation complète (2026-11-03)
+
+Test fait par l'utilisateur dans son Firefox, avec l'extension en module temporaire (`dist/firefox-mv3`) et ses sessions AlloCiné et SensCritique.
+
+| Point | Résultat |
+|---|---|
+| Chargement, ouverture de l'application, demande d'accès aux sites, vérification des sessions | ✅ selon l'utilisateur (« fonctionne à merveille ») |
+| Lecture AlloCiné → correspondance SensCritique → aperçu → simulation, via le vrai pont de site | ✅ selon l'utilisateur |
+| Sauvegarde CSV exportée | ✅ fichier relu : 6 films, identifiants, URL, titres FR et originaux, années et notes sur 5 corrects ; aucun identifiant utilisateur ni jeton |
+
 ## Pas encore vérifié
 
 | Point | Pourquoi |
 |---|---|
-| Extension chargée dans Chrome et Firefox (permissions, `scripting.executeScript` en monde MAIN, onglets, alarmes, interface) | Le navigateur intégré ne charge pas d'extensions : à faire par l'utilisateur (voir README) |
+| Extension chargée dans Chrome | L'utilisateur n'a que Firefox |
+| Rapport final exporté depuis Firefox | Pas encore transmis |
 | Écriture réelle `ProductRate` et réponse exacte | Aucune écriture sans accord explicite |
 | Bornes 1–10 de SensCritique | Au premier lot de test |
 | Comportement après expiration du jeton SensCritique | Non provoqué |
