@@ -58,14 +58,25 @@ Test fait par l'utilisateur dans son Firefox, avec l'extension en module tempora
 | Lecture AlloCiné → correspondance SensCritique → aperçu → simulation, via le vrai pont de site | ✅ selon l'utilisateur |
 | Sauvegarde CSV exportée | ✅ fichier relu : 6 films, identifiants, URL, titres FR et originaux, années et notes sur 5 corrects ; aucun identifiant utilisateur ni jeton |
 
+## Première écriture réelle (2026-11-03)
+
+Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en conflit cochée volontairement pour écrasement, les autres conservées.
+
+| Point | Résultat |
+|---|---|
+| `ProductRate` réel : « À bout de souffle » 6/10 → 7/10 (3,5/5 sur AlloCiné) | ✅ rapport : « réussi, enregistrée et vérifiée » |
+| Contre-vérification indépendante sur le site après coup | ✅ `currentUserInfos.rating = 7`, `isDone: true`, `isWished: false` |
+| Conflits non cochés conservés (MIIB 5, American History X 8, Forrest Gump 7) | ✅ « ignoré : note existante conservée » |
+| Notes identiques ignorées (Moi, moche et méchant, Blair Witch) | ✅ « ignoré : déjà identique » |
+| Rapport CSV exporté | ✅ colonnes et contenu corrects, aucun identifiant utilisateur ni jeton |
+
 ## Pas encore vérifié
 
 | Point | Pourquoi |
 |---|---|
 | Extension chargée dans Chrome | L'utilisateur n'a que Firefox |
-| Rapport final exporté depuis Firefox | Pas encore transmis |
-| Écriture réelle `ProductRate` et réponse exacte | Aucune écriture sans accord explicite |
-| Bornes 1–10 de SensCritique | Au premier lot de test |
+| Transfert réel de plusieurs films, lot de test puis « Continuer » | Une seule écriture faite |
+| Création d'une note sur un film jamais noté (action `create`) | Le test était un écrasement |
 | Comportement après expiration du jeton SensCritique | Non provoqué |
 | Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
 
