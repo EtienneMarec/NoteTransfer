@@ -4,7 +4,7 @@ import { parseCsv } from '../../core/files/csv';
 import type { PivotWork } from '../../core/pivot';
 // Fixture SYNTHÉTIQUE : colonnes d'après des sources tierces, contenu inventé. À remplacer par un export réel anonymisé.
 import fixture from './__fixtures__/ratings.synthetic.csv?raw';
-import { buildLetterboxdImport, letterboxd, MAX_IMPORT_BYTES, parseLetterboxdRatings } from './index';
+import { buildLetterboxdImport, letterboxd, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseLetterboxdRatings } from './index';
 
 const work = (w: Partial<PivotWork> & { title: string }): PivotWork => ({ kind: 'movie', externalIds: {}, refs: [], ...w });
 
@@ -83,6 +83,12 @@ describe('buildLetterboxdImport', () => {
       ['tt0113247', 'La haine', '1995', '', '4'],
       ['', 'Sans ID', '2000', '', '3'],
     ]);
+  });
+
+  it('découpe au-delà de 1 900 titres', () => {
+    const rows = Array.from({ length: 4000 }, (_, i) => ({ work: work({ title: `Film ${i}`, year: 2000 }), value: 3 }));
+    const files = buildLetterboxdImport(rows);
+    expect(files.map((f) => f.content.trim().split('\n').length - 1)).toEqual([MAX_IMPORT_ROWS, MAX_IMPORT_ROWS, 200]);
   });
 
   it('découpe au-delà de 1 Mo en répétant l’en-tête', () => {

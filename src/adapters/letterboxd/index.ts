@@ -7,6 +7,8 @@ import { SCALES } from '../../core/scales';
 
 /** L'importeur refuse les fichiers de plus de 1 Mo : on découpe un peu avant. */
 export const MAX_IMPORT_BYTES = 950_000;
+/** Limite affichée sur letterboxd.com/import (vérifiée le 2026-11-03) : 1 900 titres par fichier. */
+export const MAX_IMPORT_ROWS = 1_900;
 
 // ---- Lecture : export officiel (ZIP ou ratings.csv) -------------------------------------
 // Colonnes attendues (source tierce, à confirmer sur un export réel) : Date, Name, Year, Letterboxd URI, Rating.
@@ -82,7 +84,7 @@ export function buildLetterboxdImport(rows: Array<{ work: PivotWork; value: numb
   for (const r of rows) {
     const l = line(r);
     const bytes = encoder.encode(l).length + 1;
-    if (current.length && size + bytes > MAX_IMPORT_BYTES) {
+    if (current.length && (size + bytes > MAX_IMPORT_BYTES || current.length >= MAX_IMPORT_ROWS)) {
       files.push(current);
       current = [];
       size = encoder.encode(headerLine).length + 1;
@@ -113,7 +115,8 @@ export const letterboxd: PlatformAdapter = {
     notes: 'Par les fichiers officiels d’export et d’import. Aucune requête n’est envoyée à Letterboxd.',
     writeSideEffects:
       'Letterboxd fait lui-même le rapprochement des films et ne documente pas ce qu’il fait d’une note déjà présente. ' +
-      'Vérifiez son récapitulatif avant de confirmer : l’import ne peut pas être annulé.',
+      'Les films importés sont aussi marqués comme vus. Vérifiez son récapitulatif avant de confirmer : l’import ne peut pas être annulé. ' +
+      'L’importeur est normalement réservé aux membres Pro (ouvert à tous pour une durée limitée en novembre 2026).',
   },
   exportFileTypes: '.zip,.csv,application/zip,text/csv',
   exportInstructions:

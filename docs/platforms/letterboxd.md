@@ -45,9 +45,17 @@ Source : <https://letterboxd.com/legal/terms-of-use/>
 - **Correspondance** : faite par l'importeur. Une ligne avec un ID IMDb ou TMDB est classée « sûr » ; sans ID, elle est classée « à vérifier » et décochée, et l'utilisateur doit la valider.
 - **Tests** : sur fixtures **synthétiques** uniquement (`__fixtures__/ratings.synthetic.csv`).
 
+## Vérifié sur le vrai site (compte de test, 2026-11-03)
+
+- La page `letterboxd.com/import/` indique que **l'importeur est normalement réservé aux membres Pro**, ouvert à tous « pour une durée limitée ». Elle annonce aussi **1 900 titres maximum par fichier**, en UTF-8. L'adaptateur découpe désormais aussi à 1 900 lignes.
+- Le fichier généré par l'adaptateur a été déposé : 6 films AlloCiné sans ID et 1 film IMDb avec ID. **Le rapprochement est correct pour les 7** ✅
+  - Les cellules `imdbID` vides sont acceptées.
+  - « À bout de souffle » est reconnu comme « Breathless », grâce à l'année et au réalisateur.
+  - Les accents et la colonne `Directors` entre guillemets passent correctement.
+- L'importeur prévient que « Titles will be marked as watched » : c'est indiqué dans `writeSideEffects`.
+- **Letterboxd affiche une vérification anti-robot (« Security check ») à une session automatisée**, et pas à l'utilisateur. Je n'ai pas cherché à la contourner : la confirmation de l'import a été laissée à l'utilisateur. C'est cohérent avec le choix de ne jamais automatiser le site.
+
 ## Reste à vérifier
 
-1. Colonnes exactes de `ratings.csv`, à partir d'un export réel anonymisé.
+1. Colonnes exactes de `ratings.csv`, à partir d'un export réel.
 2. Effet d'un import sur un film déjà noté.
-3. Réaction de l'importeur à une colonne `imdbID` vide sur certaines lignes (cas d'un mélange de films avec et sans ID).
-4. Un import réel du fichier généré, avec un ou deux films.
