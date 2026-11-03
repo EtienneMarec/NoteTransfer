@@ -82,7 +82,7 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 
 ## Letterboxd et IMDb (fichiers) : fixtures synthétiques uniquement
 
-Aucun export réel n'a encore été fourni : les en-têtes viennent de la doc officielle de Letterboxd (import) et de sources tierces (exports).
+Aucun export réel n'a été fourni, car l'utilisateur n'a de compte ni Letterboxd ni IMDb. Les en-têtes viennent de la doc officielle de Letterboxd pour l'import et de sources tierces pour les exports : [guide IMDb → Hugo](https://jcktrue.dk/project/imdb-to-hugo-md/) et [importeur IMDb (Greasy Fork)](https://greasyfork.org/en/scripts/463836-imdb-ratings-importer/discussions/183933) pour IMDb, [analyse de données Letterboxd](https://julianegerez.github.io/blog/2023/06/11/Letterboxd) pour Letterboxd. Ces sources confirment les noms de colonnes, pas leur ordre exact. Pour limiter le risque, les lecteurs n'exigent que le strict minimum (`Const` et `Your Rating` pour IMDb, `Name` et `Rating` pour Letterboxd) et retrouvent les colonnes par leur nom, quel que soit leur ordre.
 
 | Point | Tests | État |
 |---|---|---|
