@@ -123,7 +123,7 @@ export function createHttpClient({
           throw new PauseError('blocked', `${host} affiche une vérification (${block}).`, { reason: block, url: req.url });
         }
         if (!RETRYABLE_STATUS.has(res.status)) {
-          if (res.status >= 400) throw new HttpError(res.status, `${host} a répondu ${res.status}`);
+          if (res.status >= 400) throw new HttpError(res.status, `${host} a répondu ${res.status}`, res.body);
           return res;
         }
         failure = `statut ${res.status}`;
