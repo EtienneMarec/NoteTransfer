@@ -6,7 +6,7 @@ import type { HttpRequest, RawResponse, Transport } from '../core/http/client';
  * Le jeton est lu dans le cookie et ajouté à l'en-tête ici : il n'est jamais renvoyé à l'extension.
  * Cette fonction est sérialisée par scripting.executeScript : elle ne doit rien capturer de l'extérieur.
  */
-async function fetchFromPage(
+export async function fetchFromPage(
   req: { url: string; method: string; headers: Record<string, string>; body: string | null },
   auth: { cookie: string; header: string; prefix: string },
 ): Promise<{ status: number; headers: Record<string, string>; body: string } | { error: string }> {
