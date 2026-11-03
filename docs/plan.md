@@ -1,6 +1,8 @@
 # Plan : extension de transfert de notes de films
 
-> Ce plan est à valider **avant de coder**. Les faits sur chaque plateforme sont dans `docs/platforms/*.md`.
+> Plan initial, validé puis réalisé. Les faits sur chaque plateforme sont dans `docs/platforms/*.md`.
+>
+> **Décision du 2026-11-03 : Trakt et TMDB sont hors périmètre.** Les passages qui les concernent (B6, § 5 point 5, M7, permissions) sont conservés pour l'historique. Le code ne déclare plus leurs permissions ni leurs identifiants de plateforme.
 
 ## 1. Points bloquants et restrictions (à trancher)
 
@@ -199,8 +201,8 @@ export interface PlatformAdapter {
 | SensCritique | `site` | `site` | 1–10 / 1 | — |
 | Letterboxd | `file` | `file` | 0,5–5 / 0,5 | — (import : imdb, tmdb) |
 | IMDb | `file` | — | 1–10 / 1 | imdb |
-| Trakt | `api` | `api` | 1–10 / 1 | imdb, tmdb, trakt |
-| TMDB | `api` | `api` | 0,5–10 / 0,5 ❓ | tmdb, imdb |
+| ~~Trakt~~ | hors périmètre | | | |
+| ~~TMDB~~ | hors périmètre | | | |
 
 ## 5. Correspondance des films
 
@@ -257,7 +259,7 @@ Entre les échelles 0,5–5 (AlloCiné, Letterboxd) et 1–10 entières (SensCri
 
 - Aucun mot de passe demandé ni stocké. Aucun cookie ni jeton lu par l'extension : le pont de site s'en charge implicitement.
 - Le logger retire `authorization`, `cookie` et `set-cookie`, ainsi que tout champ dont le nom contient `token`, `secret` ou `session`. Un test unitaire le vérifie.
-- `permissions` : `storage`, `alarms`, `scripting`. `optional_host_permissions` par plateforme : `https://www.allocine.fr/*`, `https://mon.allocine.fr/*`, `https://graph.allocine.fr/*`, `https://www.senscritique.com/*`, `https://apollo.senscritique.com/*`, `https://api.trakt.tv/*`, `https://api.themoviedb.org/*`. Aucune permission pour IMDb ni Letterboxd.
+- `permissions` : `storage`, `alarms`, `scripting`. `optional_host_permissions` par plateforme : `https://www.allocine.fr/*`, `https://mon.allocine.fr/*`, `https://graph.allocine.fr/*`, `https://www.senscritique.com/*`, `https://apollo.senscritique.com/*`. Aucune permission pour IMDb ni Letterboxd.
 - Clés API (TMDB, Trakt) dans `storage.local`, jamais exportées dans les sauvegardes.
 - Bouton « Tout supprimer » : vide IndexedDB et `storage.local`, puis révoque les permissions optionnelles.
 - Mentions TMDB et Trakt dans « À propos ».

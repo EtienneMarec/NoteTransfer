@@ -8,8 +8,6 @@ export const HOST_PERMISSIONS = {
   senscritique: ['https://www.senscritique.com/*', 'https://apollo.senscritique.com/*'],
   letterboxd: [],
   imdb: [],
-  trakt: ['https://api.trakt.tv/*'],
-  tmdb: ['https://api.themoviedb.org/*'],
 } as const satisfies Record<string, readonly string[]>;
 
 export const OPTIONAL_HOST_PERMISSIONS: string[] = [...new Set(Object.values(HOST_PERMISSIONS).flat())];

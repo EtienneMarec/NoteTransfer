@@ -22,7 +22,7 @@ describe('openJobStore', () => {
     expect(rows.map((r) => `${r.rowId}:${r.status}`)).toEqual(['a:done', 'b:pending']);
   });
 
-  it('expire les correspondances datées (TMDB : 6 mois maximum)', async () => {
+  it('expire les correspondances datées', async () => {
     const store = await openJobStore('store-2');
     const key = matchCacheKey({ platform: 'allocine', id: '12551' }, 'senscritique');
     expect(key).toBe('allocine:12551>senscritique');

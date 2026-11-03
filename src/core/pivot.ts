@@ -4,7 +4,7 @@
  */
 export const PIVOT_SCHEMA_VERSION = 1;
 
-export type PlatformId = 'allocine' | 'senscritique' | 'letterboxd' | 'imdb' | 'trakt' | 'tmdb';
+export type PlatformId = 'allocine' | 'senscritique' | 'letterboxd' | 'imdb';
 
 /** V1 : 'movie' uniquement. Les autres valeurs réservent la place des séries. */
 export type WorkKind = 'movie' | 'series' | 'season' | 'episode';
@@ -26,8 +26,8 @@ export interface PivotRating {
 
 export interface ExternalIds {
   imdb?: string;
+  /** Accepté par l'importeur Letterboxd. */
   tmdb?: number;
-  trakt?: number;
   eidr?: string;
 }
 

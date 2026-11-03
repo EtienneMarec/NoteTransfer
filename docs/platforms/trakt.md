@@ -1,5 +1,7 @@
 # Trakt
 
+> **Hors périmètre (décision du 2026-11-03).** Cette fiche reste en place pour qui voudrait ajouter Trakt plus tard (voir `docs/adding-a-platform.md`).
+
 > Exploration documentaire du 2026-11-03.
 > Légende : ✅ vérifié dans la doc officielle · 🔶 source tierce · ❓ à vérifier.
 

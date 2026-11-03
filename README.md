@@ -16,8 +16,8 @@ Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transf�
 | SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Recherche, note existante et écriture vérifiées sur le vrai site (Firefox) ; la lecture comme source n'a été testée que par requête directe |
 | Letterboxd | ✅ | ✅ | Fichiers officiels : export (ZIP ou `ratings.csv`) en entrée, fichier pour l'importeur en sortie | Export réel lu ; fichier généré importé avec succès sur un compte de test |
 | IMDb | ✅ | ✗ | Fichier CSV d'export officiel (IMDb ne permet aucun import) | Export réel lu (compte de test) |
-| Trakt | prévu | prévu | API officielle (OAuth) | Documenté |
-| TMDB | prévu | prévu | API officielle (clé fournie par vous) | Documenté |
+
+Trakt et TMDB ont été étudiés ([docs/platforms/](docs/platforms/)) mais sont hors périmètre pour l'instant.
 
 Le détail de chaque plateforme (méthodes, authentification, pagination, échelle, limites, points fragiles et CGU) est dans [docs/platforms/](docs/platforms/).
 
@@ -74,7 +74,7 @@ Vous pouvez mettre en pause et reprendre à tout moment. Après une fermeture du
 
 ## Conversion des notes
 
-La note d'origine et son échelle sont conservées. La conversion est proportionnelle (3,5/5 → 7/10), puis alignée sur le pas de la destination. Entre AlloCiné (0,5 à 5) et SensCritique (1 à 10), elle est toujours exacte. Quand elle ne l'est pas (TMDB à l'avenir), l'aperçu affiche l'ancienne note, la nouvelle et la règle d'arrondi choisie.
+La note d'origine et son échelle sont conservées. La conversion est proportionnelle (3,5/5 → 7/10), puis alignée sur le pas de la destination. Entre AlloCiné (0,5 à 5) et SensCritique (1 à 10), elle est toujours exacte. Il en va de même entre Letterboxd (0,5 à 5) et IMDb (1 à 10). Si une future plateforme rend une conversion inexacte, l'aperçu affichera l'ancienne note, la nouvelle et la règle d'arrondi choisie.
 
 ## Développement
 

@@ -29,7 +29,7 @@ export interface MatchDecision {
 export const WEIGHTS = { title: 0.45, year: 0.25, director: 0.2, runtime: 0.1 } as const;
 export const THRESHOLDS = { sure: 0.85, review: 0.5, ambiguityGap: 0.1, maxYearGap: 2 } as const;
 
-const ID_KEYS: (keyof ExternalIds)[] = ['imdb', 'tmdb', 'trakt', 'eidr'];
+const ID_KEYS: (keyof ExternalIds)[] = ['imdb', 'tmdb', 'eidr'];
 
 function compareIds(a: ExternalIds, b: ExternalIds): 'match' | 'conflict' | undefined {
   let result: 'match' | undefined;

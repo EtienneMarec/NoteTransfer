@@ -17,7 +17,7 @@ describe('convertRating', () => {
     }
   });
 
-  it('arrondit 7,5/10 (TMDB) au plus proche, demi vers le haut, et le signale', () => {
+  it('arrondit 7,5/10 (demi-points) au plus proche, demi vers le haut, et le signale', () => {
     expect(convertRating(7.5, halfPointsOf10, integersOf10)).toEqual({
       value: 8,
       exact: false,

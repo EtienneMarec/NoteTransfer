@@ -8,7 +8,7 @@ export interface MatchCacheEntry {
   destinationUrl?: string;
   confirmedByUser: boolean;
   savedAt: string;
-  /** Requis pour les données issues de TMDB (CGU : 6 mois maximum). */
+  /** Date d'expiration facultative (pour une source dont les CGU limitent la durée de cache). */
   expiresAt?: string;
 }
 

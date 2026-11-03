@@ -1,5 +1,7 @@
 # TMDB (The Movie Database)
 
+> **Hors périmètre (décision du 2026-11-03).** Cette fiche reste en place pour qui voudrait ajouter TMDB plus tard, comme plateforme ou comme service de correspondance.
+
 > Exploration documentaire du 2026-11-03.
 > Légende : ✅ vérifié dans la doc officielle · 🔶 source tierce · ❓ à vérifier.
 

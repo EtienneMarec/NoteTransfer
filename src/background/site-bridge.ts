@@ -93,7 +93,7 @@ export function siteTransport(config: SiteConfig, pool: TabPool): Transport {
   };
 }
 
-/** Transport pour les API officielles (Trakt, TMDB) : fetch direct depuis le background. */
+/** Transport pour une plateforme à API officielle (aucune pour l'instant) : fetch direct depuis le background. */
 export const fetchTransport: Transport = async (req, signal) => {
   const res = await fetch(req.url, { method: req.method ?? 'GET', headers: req.headers ?? {}, body: req.body ?? null, signal });
   const headers: Record<string, string> = {};
