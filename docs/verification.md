@@ -18,6 +18,17 @@ Chaque point est marqué ✅ réel (vérifié sur le vrai site), 🧪 fixtures (
 | AlloCiné : obfuscation des liens (`ACr` + base64) | ✅ |
 | AlloCiné : JSON-LD de la fiche (titre, durée, réalisateur, EIDR) | ✅ |
 
+## Noyau (tests unitaires uniquement, aucun site impliqué)
+
+| Module | Tests | État |
+|---|---|---|
+| Conversion des notes (`core/convert.ts`) | 9 | 🧪 |
+| Normalisation et score de correspondance (`core/match`) | 12, dont données réelles de La Haine | 🧪 |
+| Client HTTP : file par hôte, délai aléatoire, backoff, Retry-After, pause (`core/http`) | 13 | 🧪 |
+| Logger qui masque les secrets (`core/log.ts`) | 5 | 🧪 |
+| Job persistant : lot de test, conflits, reprise sans doublon, simulation (`core/job`) | 16 | 🧪 |
+| Build Chrome MV3 et Firefox MV3 | — | ✅ compile, ⏳ non chargé dans un navigateur |
+
 ## À vérifier avec un compte connecté
 
 Voir la section « Ce que j'ai besoin que tu vérifies » dans la réponse associée à ce plan, ou `docs/platforms/*.md`, rubrique « Reste à vérifier ».
