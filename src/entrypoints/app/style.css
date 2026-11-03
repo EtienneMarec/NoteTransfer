@@ -1,0 +1,80 @@
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --text: #1d1d1f;
+  --muted: #6b6b70;
+  --border: #e2e2e0;
+  --accent: #2f5bea;
+  --accent-text: #ffffff;
+  --ok: #1f7a3f;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --ok-bg: #e6f4ea;
+  --warn-bg: #fff4dc;
+  --bad-bg: #fde8e6;
+  --radius: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161618;
+    --surface: #1f1f22;
+    --text: #ececee;
+    --muted: #a0a0a8;
+    --border: #34343a;
+    --accent: #7c9bff;
+    --accent-text: #0d0d10;
+    --ok: #7fd49a;
+    --warn: #f0c25a;
+    --bad: #ff8a80;
+    --ok-bg: #18301f;
+    --warn-bg: #352a10;
+    --bad-bg: #3a1a18;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+header.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+header.top h1 { font-size: 20px; margin: 0; flex: 1; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+h3 { font-size: 15px; margin: 16px 0 8px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 500; }
+label.check { display: flex; gap: 8px; align-items: flex-start; }
+select, input[type='number'], input[type='url'], input[type='text'] {
+  font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; min-width: 0;
+}
+button { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.notice { border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
+.notice.warn { background: var(--warn-bg); color: var(--warn); }
+.notice.bad { background: var(--bad-bg); color: var(--bad); }
+.notice.ok { background: var(--ok-bg); color: var(--ok); }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.badge.sure, .badge.done { background: var(--ok-bg); color: var(--ok); }
+.badge.review, .badge.in_flight, .badge.pending { background: var(--warn-bg); color: var(--warn); }
+.badge.not_found, .badge.failed { background: var(--bad-bg); color: var(--bad); }
+.badge.skipped { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.num { white-space: nowrap; }
+a { color: var(--accent); }
+.progress { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.progress > div { height: 100%; background: var(--accent); transition: width 0.3s; }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.stats div { min-width: 90px; }
+.stats strong { display: block; font-size: 20px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.tabs button[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+details summary { cursor: pointer; }
+pre.logs { max-height: 240px; overflow: auto; font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
