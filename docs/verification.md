@@ -35,6 +35,29 @@ Comptes connectés par l'utilisateur dans le navigateur intégré. Aucune écrit
 | SensCritique : collection de l'utilisateur | ✅ avec `rating` et `dateDone` |
 | SensCritique : texte de `ProductRate` | ✅ relevé dans le JS, ⏳ jamais exécuté |
 
+## Code des adaptateurs exécuté sur le vrai site, en lecture seule (2026-11-03)
+
+Requêtes **exactes** des fichiers `src/adapters/*/queries.ts` et fonction `fetchFromPage` du pont de site, exécutées dans un onglet connecté du navigateur intégré. L'extension elle-même n'était pas chargée.
+
+| Point | Résultat |
+|---|---|
+| AlloCiné `ME` | ✅ 200, pseudo renvoyé |
+| AlloCiné `MOVIES_RATED` (`first: 30`) | ✅ 200, 6 films sur 6 |
+| AlloCiné sans jeton | ✅ 401 `JWT Token not found`, traité comme « déconnecté » |
+| SensCritique `ME`, `SEARCH`, `productDetails` (alias), `CURRENT_USER_RATING`, `COLLECTION` | ✅ 200, champs attendus, `url` présent |
+| SensCritique `PRODUCT_RATE` | ✅ document **validé par le schéma sans exécution** (variable volontairement invalide → `BAD_USER_INPUT`) |
+| **Simulation de correspondance** : 6 films AlloCiné (fixtures réelles) → `senscritique.searchFilm` + `decideMatch` + `getExistingRating` + `planRow` réels | ✅ 6/6 « sûr » et corrects (MIIB retrouvé via « Men in Black II » ; American History X à 1998/1999 confirmé par le réalisateur) ; 4 conflits conservés, 2 notes identiques, **0 écriture prévue** |
+
+## Pas encore vérifié
+
+| Point | Pourquoi |
+|---|---|
+| Extension chargée dans Chrome et Firefox (permissions, `scripting.executeScript` en monde MAIN, onglets, alarmes, interface) | Le navigateur intégré ne charge pas d'extensions : à faire par l'utilisateur (voir README) |
+| Écriture réelle `ProductRate` et réponse exacte | Aucune écriture sans accord explicite |
+| Bornes 1–10 de SensCritique | Au premier lot de test |
+| Comportement après expiration du jeton SensCritique | Non provoqué |
+| Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
+
 ## Noyau (tests unitaires uniquement, aucun site impliqué)
 
 | Module | Tests | État |
@@ -44,6 +67,11 @@ Comptes connectés par l'utilisateur dans le navigateur intégré. Aucune écrit
 | Client HTTP : file par hôte, délai aléatoire, backoff, Retry-After, pause (`core/http`) | 13 | 🧪 |
 | Logger qui masque les secrets (`core/log.ts`) | 5 | 🧪 |
 | Job persistant : lot de test, conflits, reprise sans doublon, simulation (`core/job`) | 16 | 🧪 |
+| GraphQL : classement des erreurs, durées ISO (`core/graphql.ts`) | 6 | 🧪 |
+| Adaptateur AlloCiné sur fixtures réelles | 9 | 🧪 |
+| Adaptateur SensCritique sur fixtures réelles (écriture : réponse construite) | 7 | 🧪 |
+| Pipeline lecture → correspondance → aperçu → simulation → rapport, sauvegarde | 8 | 🧪 |
+| Pont de site : injection de l'en-tête depuis le cookie | 3 | 🧪 |
 | Build Chrome MV3 et Firefox MV3 | — | ✅ compile, ⏳ non chargé dans un navigateur |
 
 ## À vérifier avec un compte connecté
