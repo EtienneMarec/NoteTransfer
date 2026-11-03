@@ -1,0 +1,65 @@
+import type { SessionStatus } from '../core/adapter';
+import type { JobRow, TransferJob } from '../core/job/types';
+import type { LogRecord } from '../core/log';
+import type { PlatformId } from '../core/pivot';
+
+export interface Settings {
+  minDelayMs: number;
+  maxDelayMs: number;
+  /** Date d'acceptation de l'avertissement CGU, par plateforme. */
+  termsAccepted: Partial<Record<PlatformId, string>>;
+}
+
+export const DEFAULT_SETTINGS: Settings = { minDelayMs: 2000, maxDelayMs: 4000, termsAccepted: {} };
+
+export type Request =
+  | { type: 'checkSessions'; platforms: PlatformId[] }
+  | { type: 'createJob'; job: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'> }
+  | { type: 'listJobs' }
+  | { type: 'getJob'; jobId: string }
+  | { type: 'pause'; jobId: string }
+  | { type: 'resume'; jobId: string }
+  | { type: 'cancel'; jobId: string }
+  | { type: 'deleteJob'; jobId: string }
+  | { type: 'setRowSelected'; jobId: string; rowId: string; selected: boolean }
+  | { type: 'setRowCandidate'; jobId: string; rowId: string; candidateId: string | null }
+  | { type: 'setRowUrl'; jobId: string; rowId: string; url: string }
+  | { type: 'setConflictPolicy'; jobId: string; policy: TransferJob['conflictPolicy'] }
+  | { type: 'markBackupSaved'; jobId: string }
+  | { type: 'startWriting'; jobId: string }
+  | { type: 'confirmTestBatch'; jobId: string }
+  | { type: 'getSettings' }
+  | { type: 'saveSettings'; settings: Settings }
+  | { type: 'getLogs' }
+  | { type: 'deleteAll' };
+
+export interface Responses {
+  checkSessions: Partial<Record<PlatformId, SessionStatus>>;
+  createJob: { jobId: string };
+  listJobs: TransferJob[];
+  getJob: { job: TransferJob; rows: JobRow[]; active: boolean } | null;
+  pause: boolean;
+  resume: boolean;
+  cancel: boolean;
+  deleteJob: true;
+  setRowSelected: JobRow;
+  setRowCandidate: JobRow;
+  setRowUrl: JobRow;
+  setConflictPolicy: true;
+  markBackupSaved: true;
+  startWriting: boolean;
+  confirmTestBatch: boolean;
+  getSettings: Settings;
+  saveSettings: true;
+  getLogs: LogRecord[];
+  deleteAll: true;
+}
+
+export type Reply<T extends Request['type']> = { ok: true; value: Responses[T] } | { ok: false; error: string };
+
+export async function send<R extends Request>(request: R): Promise<Responses[R['type']]> {
+  const reply = (await browser.runtime.sendMessage(request)) as Reply<R['type']> | undefined;
+  if (!reply) throw new Error('Le service de l’extension ne répond pas');
+  if (!reply.ok) throw new Error(reply.error);
+  return reply.value;
+}
