@@ -1,0 +1,15 @@
+{
+  "_comment": "Réponses réelles d'apollo.senscritique.com (2026-11-03) à product(id: 472094) { id title currentUserInfos { rating isDone isWished dateDone review { url } } }, avec et sans en-tête authorization. Aucun identifiant d'utilisateur.",
+  "authenticated": {
+    "data": {
+      "product": {
+        "id": 472094,
+        "title": "La Haine",
+        "currentUserInfos": { "rating": 8, "isDone": true, "isWished": false, "dateDone": null, "review": null }
+      }
+    }
+  },
+  "anonymous": {
+    "data": { "product": { "id": 472094, "currentUserInfos": null } }
+  }
+}

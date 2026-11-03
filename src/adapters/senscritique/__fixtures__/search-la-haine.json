@@ -1,0 +1,15 @@
+{
+  "_comment": "Réponse réelle et anonyme d'apollo.senscritique.com (2026-11-03) à SearchAutocomplete {keywords: \"la haine\", universe: \"movie\", limit: 5}. Aucune donnée personnelle.",
+  "data": {
+    "searchAutocomplete": {
+      "total": 5,
+      "items": [
+        { "product": { "id": 472094, "title": "La Haine", "originalTitle": null, "dateRelease": "1995-05-31", "dateReleaseOriginal": "1995-05-31", "universe": 1, "url": "/film/la_haine/472094" } },
+        { "product": { "id": 27658769, "title": "The Hate U Give – La Haine qu’on donne", "originalTitle": "The Hate U Give", "dateRelease": "2018-10-05", "dateReleaseOriginal": "2018-10-05", "universe": 1, "url": "/film/the_hate_u_give_la_haine_quon_donne/27658769" } },
+        { "product": { "id": 462757, "title": "Marqué par la haine", "originalTitle": "Somebody Up There Likes Me", "dateRelease": "1956-07-04", "dateReleaseOriginal": "1956-07-04", "universe": 1, "url": "/film/marque_par_la_haine/462757" } },
+        { "product": { "id": 374841, "title": "À l'ombre de la haine", "originalTitle": "Monster's Ball", "dateRelease": "2001-12-26", "dateReleaseOriginal": "2001-12-26", "universe": 1, "url": "/film/a_l_ombre_de_la_haine/374841" } },
+        { "product": { "id": 42550193, "title": "Le Goût de la haine", "originalTitle": "Sala samobójców. Hejter", "dateRelease": "2020-03-06", "dateReleaseOriginal": "2020-03-06", "universe": 1, "url": "/film/le_gout_de_la_haine/42550193" } }
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "_comment": "Réponse réelle de graph.allocine.fr/v1/public (2026-11-03), first=3, after=endCursor de la page 1. Seuls les identifiants d'avis (opinion.id) sont remplacés.",
+  "data": {
+    "me": {
+      "user": {
+        "social": {
+          "relatedEntities": {
+            "moviesSeen": {
+              "totalCount": 6,
+              "pageInfo": { "endCursor": "YXJyYXljb25uZWN0aW9uOjU=", "hasNextPage": false },
+              "edges": [
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6Mjk=",
+                      "internalId": 29,
+                      "title": "À bout de souffle",
+                      "originalTitle": "À bout de souffle",
+                      "data": { "productionYear": 1960 },
+                      "runtime": "PT1H30M0S",
+                      "credits": { "edges": [{ "node": { "person": { "firstName": "Jean-Luc", "lastName": "Godard" } } }] }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDA0", "content": { "rating": 3.5 } }
+                  }
+                },
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6MTA1Njg=",
+                      "internalId": 10568,
+                      "title": "Forrest Gump",
+                      "originalTitle": "Forrest Gump",
+                      "data": { "productionYear": 1994 },
+                      "runtime": "PT2H20M0S",
+                      "credits": { "edges": [{ "node": { "person": { "firstName": "Robert", "lastName": "Zemeckis" } } }] }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDA1", "content": { "rating": 3.0 } }
+                  }
+                },
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6MjAyNjg=",
+                      "internalId": 20268,
+                      "title": "Le Projet Blair Witch",
+                      "originalTitle": "The Blair Witch Project",
+                      "data": { "productionYear": 1999 },
+                      "runtime": "PT1H18M0S",
+                      "credits": {
+                        "edges": [
+                          { "node": { "person": { "firstName": "Daniel", "lastName": "Myrick" } } },
+                          { "node": { "person": { "firstName": "Eduardo", "lastName": "Sanchez" } } }
+                        ]
+                      }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDA2", "content": { "rating": 5.0 } }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

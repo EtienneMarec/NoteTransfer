@@ -1,21 +1,21 @@
 # SensCritique
 
-> Exploration du 2026-11-03, sans compte connecté.
-> Légende : ✅ vérifié sur le vrai site · 🔶 source tierce, non revérifié · ❓ à vérifier avec un compte connecté.
+> Exploration du 2026-11-03 : d'abord sans compte, puis avec un compte connecté dans le navigateur intégré, en lecture seule.
+> Légende : ✅ vérifié sur le vrai site · 🔶 source tierce, non revérifié · ❓ à vérifier.
 
 ## Résumé
 
 | Sujet | État |
 |---|---|
 | API officielle | Aucune API publique documentée |
-| Transport | GraphQL interne `https://apollo.senscritique.com/` (✅ appelé par le site, requête anonyme réussie) |
+| Transport | GraphQL interne `https://apollo.senscritique.com/` (✅ appelé par le site, requêtes testées) |
 | Recherche | `searchAutocomplete` et `searchProductExplorer` (✅ testés en anonyme) |
-| Lecture des notes | `user(username).collection(...)` → `otherUserInfos.rating` (🔶 SensBoxd) |
-| Note existante | `product(id).currentUserInfos.rating` (✅ champ présent dans `ProductMainInfos`, ❓ valeur à voir connecté) |
-| Écriture | Mutation `productRate(productId: Int!, rating: Int!)` : Product (✅ existe, vérifiée par validation sans exécution) |
+| Lecture des notes | `user(username).collection(universe: "movie", limit, offset)` → `otherUserInfos(username).rating` ✅ **testée connecté** |
+| Note existante | `product(id).currentUserInfos.rating` ✅ **testée connecté** (`null` sans session) |
+| Écriture | `mutation ProductRate($productId: Int!, $rating: Int!, $formatId: Int)` (✅ texte exact du site, ❓ jamais exécutée) |
 | Suppression | `productUnrate(...)` : Boolean! ✅ |
-| Authentification | Firebase (🔶), jeton transmis à `apollo` par un en-tête ❓ |
-| Échelle | Entiers 1 à 10 (✅ `rating: Int`, ❓ bornes à confirmer) |
+| Authentification | En-tête `authorization: <valeur du cookie SC_AUTH>`, **sans** préfixe `Bearer` ✅ |
+| Échelle | Entiers 1 à 10 (✅ `rating: Int`, valeurs observées 7, 8, 9 ; bornes à confirmer au lot de test) |
 | Identifiants externes | **Aucun** : `imdbId`, `tmdbId`, `externalIds` et `imdb` sont refusés par le schéma ✅ |
 | Protection | Cloudflare (script `challenge-platform` chargé sur les pages) ✅ |
 
@@ -49,24 +49,34 @@ Réponse : `duration: 5880` (**en secondes**), `yearOfProduction: 1995`, `direct
 
 `searchProductExplorer(query, filters, sortBy, offset, limit)` existe aussi et renvoie le fragment `ProductList` et `currentUserInfos` ✅.
 
-## Lecture des notes
+## Note existante ✅
 
-- Opération `UserCollection` (🔶 SensBoxd) : `user(username: $username) { collection(action, universe, limit, offset, order, ...) { total products { ... otherUserInfos(username) { rating } } } }`, paginée par `offset`/`limit` (25 par défaut).
-- Un profil public se lit sans authentification (SensBoxd envoie `Authorization: null`). Un profil privé demande une session ❓
-- Fragment `ProductUserInfos` ✅ : `rating`, `isDone`, `isWished`, `dateDone`, `review { url }`, etc.
+```graphql
+query ($id: Int!) { product(id: $id) { id currentUserInfos { rating isDone isWished dateDone review { url } } } }
+```
+
+Connecté : `{"rating": 8, "isDone": true, ...}`. Sans en-tête `authorization` : `currentUserInfos: null`. Fixture : `src/adapters/senscritique/__fixtures__/current-user-infos.json`.
+
+## Lecture des notes ✅
+
+- `query { me { username } }` donne le pseudo de la session.
+- `user(username: $u) { collection(universe: "movie", limit: $limit, offset: $offset) { total products { id title originalTitle yearOfProduction duration directors { name } otherUserInfos(username: $u) { rating dateDone } } } }` renvoie les films, avec une **date** (`dateDone`), contrairement à AlloCiné.
+- `total` vaut 568 sur le compte testé : la collection inclut probablement aussi les films vus sans note ou en envie. Il faudra filtrer par `action` (enum `ProductAction`, valeurs à lister) ou ignorer `rating: null`.
 
 ## Écriture
 
-- `productRate(productId: Int!, rating: Int!)` renvoie un `Product` ✅. Vérification faite en envoyant une sélection volontairement invalide : le serveur rejette au stade de la validation, donc rien n'est exécuté. Il n'a pas signalé d'argument requis manquant, donc l'ancien `formatId` n'est plus obligatoire.
-- La mutation n'apparaît pas dans les bundles JS chargés sur une fiche en anonyme : elle est chargée à la demande. Le nom d'opération et les variables exactes utilisés par le site restent ❓
+- Texte exact utilisé par le site (module chargé à la demande) ✅ :
+  `mutation ProductRate($productId: Int!, $rating: Int!, $formatId: Int) { productRate(productId: $productId, rating: $rating, formatId: $formatId) { id currentUserInfos { ...ProductUserInfos } } }`
+- La réponse optimiste du site met `isDone: true` et `isWished: false`. **Noter un film le retire donc des envies.** C'est à signaler dans l'aperçu.
 - Vérification après écriture : relire `product(id).currentUserInfos.rating`.
-- On ne sait pas si `productRate` marque aussi le film « vu » (`isDone`) ❓ C'est probable et sans conséquence pour la V1.
+- Jamais exécutée : le premier vrai test sera le lot de test, avec ton accord.
 
-## Authentification
+## Authentification ✅
 
-- 🔶 NitriKx/senscritique-graphql-api : connexion Firebase. Le jeton est ensuite envoyé à l'API GraphQL.
-- ❓ Nom de l'en-tête (probablement `Authorization`) et emplacement du jeton côté navigateur (cookie ou stockage local).
-- Approche prévue : exécuter les requêtes depuis un onglet `senscritique.com` (script de contenu). Le jeton reste dans le contexte du site, et Cloudflare voit une requête issue de la page.
+- Le client Apollo du site ajoute `authorization: <cookie SC_AUTH>` quand un utilisateur est connecté. Il ajoute aussi `Apollo-Require-Preflight: true` pour les envois de fichiers (inutile ici).
+- Le cookie `SC_AUTH` est lisible en JavaScript sur `www.senscritique.com`, donc accessible au script de contenu.
+- En cas de code `UNAUTHENTICATED` ou `auth/unauthenticated-user`, le site recharge la page. L'adaptateur renverra `signed_out`.
+- Approche retenue : le script de contenu d'un onglet `senscritique.com` lit le cookie et envoie la requête. Le jeton ne quitte jamais l'onglet.
 
 ## Limites observées
 
@@ -91,9 +101,10 @@ Source : <https://senscritique.notion.site/Conditions-G-n-rales-d-Utilisation-72
 
 **Lecture** : noter ses propres films via l'API utilisée par le site n'est pas explicitement interdit, mais ce n'est pas autorisé non plus. Le risque est plus faible qu'avec AlloCiné, à condition de garder un rythme modéré.
 
-## Reste à vérifier (compte connecté)
+## Reste à vérifier
 
-1. En-tête d'authentification envoyé à `apollo.senscritique.com` (nom uniquement, jamais la valeur).
-2. Nom d'opération et variables exacts lors d'un clic sur une note.
-3. Bornes de l'échelle (1 à 10 ?) et effet sur `isDone`.
-4. `checkSession()` : requête `Me` avec la session courante.
+1. ~~En-tête d'authentification~~ ✅
+2. ~~Mutation exacte~~ ✅
+3. Bornes de l'échelle (1 à 10) et réponse réelle de `ProductRate` : au lot de test.
+4. ~~`checkSession()` via `Me`~~ ✅
+5. Valeurs de l'enum `ProductAction` pour filtrer les films notés (seulement si SensCritique sert de source).

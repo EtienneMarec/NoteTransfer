@@ -1,0 +1,69 @@
+{
+  "_comment": "Réponse réelle de graph.allocine.fr/v1/public (2026-11-03), first=3. Seuls les identifiants d'avis (opinion.id) sont remplacés.",
+  "data": {
+    "me": {
+      "user": {
+        "social": {
+          "relatedEntities": {
+            "moviesSeen": {
+              "totalCount": 6,
+              "pageInfo": { "endCursor": "YXJyYXljb25uZWN0aW9uOjI=", "hasNextPage": true },
+              "edges": [
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6MjgzNTU=",
+                      "internalId": 28355,
+                      "title": "MIIB",
+                      "originalTitle": "Men in Black II",
+                      "data": { "productionYear": 2002 },
+                      "runtime": "PT1H30M0S",
+                      "credits": { "edges": [{ "node": { "person": { "firstName": "Barry", "lastName": "Sonnenfeld" } } }] }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDAx", "content": { "rating": 3.0 } }
+                  }
+                },
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6MTI0NzU=",
+                      "internalId": 12475,
+                      "title": "American History X",
+                      "originalTitle": "American History X",
+                      "data": { "productionYear": 1998 },
+                      "runtime": "PT1H59M0S",
+                      "credits": { "edges": [{ "node": { "person": { "firstName": "Tony", "lastName": "Kaye" } } }] }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDAy", "content": { "rating": 4.5 } }
+                  }
+                },
+                {
+                  "node": {
+                    "entity": {
+                      "__typename": "Movie",
+                      "id": "TW92aWU6MTQwNjIz",
+                      "internalId": 140623,
+                      "title": "Moi, moche et méchant",
+                      "originalTitle": "Despicable Me",
+                      "data": { "productionYear": 2010 },
+                      "runtime": "PT1H35M0S",
+                      "credits": {
+                        "edges": [
+                          { "node": { "person": { "firstName": "Chris", "lastName": "Renaud" } } },
+                          { "node": { "person": { "firstName": "Pierre", "lastName": "Coffin" } } }
+                        ]
+                      }
+                    },
+                    "opinion": { "id": "T3BpbmlvbjoxMDAwMDAwMDAz", "content": { "rating": 2.5 } }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,23 @@ Chaque point est marqué ✅ réel (vérifié sur le vrai site), 🧪 fixtures (
 | AlloCiné : obfuscation des liens (`ACr` + base64) | ✅ |
 | AlloCiné : JSON-LD de la fiche (titre, durée, réalisateur, EIDR) | ✅ |
 
+## Vérifié sur le vrai site, avec un compte connecté, en lecture seule (2026-11-03)
+
+Comptes connectés par l'utilisateur dans le navigateur intégré. Aucune écriture, aucune valeur de cookie ou de jeton relevée.
+
+| Point | Résultat |
+|---|---|
+| AlloCiné : endpoint et authentification | ✅ `POST graph.allocine.fr/v1/public`, `Authorization: Bearer` + cookie `GraphToken` |
+| AlloCiné : liste paginée des notes | ✅ 6 films sur 2 pages, titre FR et original, année, durée, réalisateurs, note sur 5 |
+| AlloCiné : date de notation | ✅ absente (`null`) |
+| AlloCiné : indicateur de maintenance | ✅ `GET mon.allocine.fr/_/maintenance/social` → `false` |
+| AlloCiné : texte de `AddOpinion` / `UpdateOpinion` | ✅ relevé dans le JS, ⏳ jamais exécuté |
+| SensCritique : authentification | ✅ en-tête `authorization` = cookie `SC_AUTH` |
+| SensCritique : session (`me`) | ✅ |
+| SensCritique : note existante (`currentUserInfos`) | ✅ 8/10 connecté, `null` sans en-tête |
+| SensCritique : collection de l'utilisateur | ✅ avec `rating` et `dateDone` |
+| SensCritique : texte de `ProductRate` | ✅ relevé dans le JS, ⏳ jamais exécuté |
+
 ## Noyau (tests unitaires uniquement, aucun site impliqué)
 
 | Module | Tests | État |

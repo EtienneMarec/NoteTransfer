@@ -1,17 +1,18 @@
 # AlloCiné
 
-> Exploration du 2026-11-03, sans compte connecté.
-> Légende : ✅ vérifié sur le vrai site · 🔶 source tierce, non revérifié · ❓ à vérifier avec un compte connecté.
+> Exploration du 2026-11-03 : d'abord sans compte, puis avec un compte connecté dans le navigateur intégré, en lecture seule.
+> Légende : ✅ vérifié sur le vrai site · 🔶 source tierce, non revérifié · ❓ à vérifier.
 
 ## Résumé
 
 | Sujet | État |
 |---|---|
 | API officielle | Aucune API publique documentée |
-| Lecture des notes | API GraphQL interne `graph.allocine.fr` (✅ opérations repérées dans le JS) ou page HTML du profil (🔶) |
-| Écriture des notes | Mutations GraphQL internes `addUserOpinion` / `updateUserOpinion` (✅ repérées, ❓ non testées) |
-| Authentification | Session du site (cookie ou jeton). Mécanisme exact ❓ |
-| Échelle | 0,5 à 5, pas de 0,5 (✅ argument `rating: Float`, widget de 10 demi-étoiles) |
+| Endpoint | `POST https://graph.allocine.fr/v1/public` ✅ |
+| Lecture des notes | `GetMoviesSeen` → `me.user.social.relatedEntities.movies(action: [OPINION])`, pagination par curseur ✅ **testée connecté** |
+| Écriture des notes | `AddOpinion` / `UpdateOpinion` (texte exact relevé ✅, ❓ jamais exécutées) |
+| Authentification | En-tête `Authorization: Bearer <valeur du cookie GraphToken>` ✅ |
+| Échelle | 0,5 à 5, pas de 0,5 (✅ `rating(base: 5)` renvoie 2.5, 3.0, 4.5…) |
 | Identifiants externes | Aucun ID IMDb/TMDB exposé. ID interne `Movie:<cfilm>` et identifiant EIDR dans le JSON-LD (✅) |
 | CGU | **Bloquant potentiel** : extraction automatisée interdite (voir plus bas) |
 
@@ -24,15 +25,35 @@
 
 ## Lecture
 
-### Option A : GraphQL interne (recommandée, ❓ à confirmer)
+### GraphQL interne (retenue) ✅
 
-- Hôte : `https://graph.allocine.fr`, lu dans `AC.config.hosts.graph` sur la page ✅. Le chemin exact (`/`, `/v1/...`) reste ❓ : un `POST` anonyme depuis la page vers `/`, `/v1/public` et `/v1/mobile` a échoué en CORS.
-- Opérations présentes dans `moviepage.*.js` ✅ :
-  - `GetUserOpinion($entityIds: [String]!)` → `me.user.social.entities(entity: $entityIds, action: [OPINION])`. Lit la note de l'utilisateur pour des films donnés. Utile pour `getExistingRating()`.
-  - `GetUserSocialActionsForEntities(...)` : même principe, en lot.
-  - `getUser` → `me.user { legacyId nickname ... }`. Utile pour `checkSession()`.
-  - Fragment `UserEntityLeafFragment` : `entity { ... }` et `opinion { ... }`.
-- L'opération qui liste **toutes** les notes de l'utilisateur, avec pagination, n'a pas été vue : elle ne charge pas sur une fiche film. Probablement sur `mon.allocine.fr/mes-films/vus/` ❓
+- `POST https://graph.allocine.fr/v1/public`, corps `{query, variables}`. Hôte lu dans `AC.config.hosts.graph`, chemin relevé dans `website-common.*.js`.
+- Opération utilisée par `mon.allocine.fr/mes-films/vus/` (`movies-seen.*.js`) : `GetMoviesSeen`, avec les variables `first: 30`, `types: [OPINION, REVIEW]`, `order: LATEST` et `brandCountry: FRANCE`.
+- Requête minimale testée connecté, 6 films sur 2 pages :
+
+  ```graphql
+  query ($first: Int, $after: String) {
+    me { user { social { relatedEntities {
+      moviesSeen: movies(first: $first, after: $after, action: [OPINION], order: [LATEST]) {
+        totalCount
+        pageInfo { endCursor hasNextPage }
+        edges { node {
+          entity { __typename ... on Movie {
+            id internalId title originalTitle data { productionYear } runtime
+            credits(department: DIRECTION) { edges { node { person { firstName lastName } } } }
+          } }
+          opinion { id content { rating(base: 5) } }
+        } }
+      }
+    } } } }
+  }
+  ```
+
+- Champs obtenus ✅ : `title` (titre FR), `originalTitle`, `data.productionYear`, `runtime` (ISO 8601, ex. `PT1H30M0S`), réalisateurs, `rating` sur 5.
+- `content.updatedAt` et `content.createdAt` valent `null` : **pas de date de notation** ✅
+- Pagination : le curseur `endCursor` est un offset en base64 (`arrayconnection:2`). `first: 200` est accepté sur un compte de 6 films ; la limite réelle est inconnue, on garde 30 comme le site.
+- Fixtures : `src/adapters/allocine/__fixtures__/movies-seen-page{1,2}.json`.
+- Autres opérations présentes ✅ : `GetUserOpinion($entityIds)` (note pour des films donnés, utile pour `getExistingRating`) et `getUser` → `me.user { legacyId nickname }` (utile pour `checkSession`).
 
 ### Option B : HTML du profil (repli)
 
@@ -53,13 +74,19 @@
   - `addUserOpinion(input: {id_entity, rating: Float, review: String})`
   - `updateUserOpinion(input: {id_entity, rating, review})`
   - `deleteUserOpinion(input: {id_entity})`
-- Aucun test d'écriture réalisé.
-- On ne sait pas encore si `updateUserOpinion` sans `review` efface une critique existante ❓ **Point critique** avant toute écriture.
+- Texte exact utilisé par le site (`movies-seen.*.js`) ✅ :
+  `mutation AddOpinion($entityId: String!, $rating: Float, $review: String, $isReview: Boolean!, $brandCountry: CountryCode!) { addUserOpinion(input: {id_entity: $entityId, rating: $rating, review: $review}) { ...MutationResponseFragment } }`. `UpdateOpinion` est identique, avec `updateUserOpinion`.
+- Le site n'envoie `review` que s'il y a une critique.
+- Avant toute mutation, le site interroge `GET https://mon.allocine.fr/_/maintenance/social`, qui renvoie `{"socialApiMaintenance": false}` ✅. L'adaptateur fera de même.
+- Aucune écriture réalisée.
+- Il faut encore vérifier si `updateUserOpinion` sans `review` efface une critique existante ❓ **Point critique** avant d'utiliser AlloCiné comme destination. Ça ne concerne pas le flux AlloCiné → SensCritique.
 
-## Authentification
+## Authentification ✅
 
-- Le site appelle `graph.allocine.fr` depuis la page. Le transport du jeton (cookie partagé `.allocine.fr` ou en-tête `Authorization`) reste ❓
-- Approche prévue : exécuter les requêtes **depuis un onglet AlloCiné** (script de contenu), comme le fait le site. L'extension ne manipule alors jamais le jeton directement.
+- Le client GraphQL du site ajoute `Authorization: Bearer <jeton>`. Le jeton est lu dans le cookie dont le nom est donné par `AC.config.userspace.graphTokenCookieName` (`GraphToken`), présent une fois connecté.
+- Pas de session : cookie absent → `checkSession()` renvoie `signed_out`.
+- Le site gère les erreurs 401 (`isUnauthorized` sur `code === 401`).
+- Approche retenue : le script de contenu d'un onglet AlloCiné lit le cookie et envoie la requête depuis la page. Le jeton ne quitte jamais l'onglet : il n'est ni renvoyé au background, ni stocké, ni journalisé.
 
 ## Limites et protections observées
 
@@ -72,7 +99,8 @@
 - Classes obfusquées et noms de classes générés (`Y6Y7qDPGTKlZvYR51Q8i`) : le scraping HTML cassera souvent.
 - API GraphQL non documentée, susceptible de changer sans préavis.
 - Les durées diffèrent selon les sites : AlloCiné indique 95 min pour La Haine, SensCritique 98 min. La durée n'est qu'un signal faible.
-- Pas de date de notation connue (🔶 allocine-to-trakt).
+- Pas de date de notation (✅ `updatedAt` vaut `null`).
+- Les identifiants de nœud (`node.id`) contiennent l'identifiant interne de l'utilisateur en base64 : ils ne doivent jamais apparaître dans un export ni dans une fixture.
 
 ## Conditions d'utilisation ⚠️
 
@@ -87,10 +115,11 @@ Source : <https://www.allocine.fr/service/conditions.html> (mise à jour du 16/0
 
 **Alternative conforme** : demander à Webedia l'export RGPD de ses données, puis l'importer dans l'extension avec un adaptateur « fichier ». Le format de cet export est inconnu ❓
 
-## Reste à vérifier (compte connecté)
+## Reste à vérifier
 
-1. URL exacte et mode d'authentification des requêtes `graph.allocine.fr`.
-2. Opération et pagination de la liste complète des notes.
-3. Champs disponibles par film : titre original, année, réalisateur, durée.
-4. Comportement de `updateUserOpinion` vis-à-vis d'une critique existante.
-5. Valeur minimale acceptée (0,5 ou 1).
+1. ~~URL et authentification~~ ✅
+2. ~~Liste complète paginée~~ ✅
+3. ~~Titre original, année, réalisateur, durée~~ ✅
+4. Comportement de `updateUserOpinion` vis-à-vis d'une critique existante (seulement si AlloCiné sert de destination).
+5. Taille de page maximale sur un gros compte.
+6. Réponse quand le jeton a expiré (401 ou erreur GraphQL ?).

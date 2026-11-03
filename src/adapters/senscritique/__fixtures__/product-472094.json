@@ -1,0 +1,15 @@
+{
+  "_comment": "Réponse réelle et anonyme d'apollo.senscritique.com (2026-11-03) à product(id: 472094) { id title originalTitle yearOfProduction dateRelease duration universe directors { name } }.",
+  "data": {
+    "product": {
+      "id": 472094,
+      "title": "La Haine",
+      "originalTitle": null,
+      "yearOfProduction": 1995,
+      "dateRelease": "1995-05-31",
+      "duration": 5880,
+      "universe": 1,
+      "directors": [{ "name": "Mathieu Kassovitz" }]
+    }
+  }
+}
