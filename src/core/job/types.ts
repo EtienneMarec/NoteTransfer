@@ -25,12 +25,21 @@ export interface TransferJob {
   dryRun: boolean;
   phase: JobPhase;
   readCursor: string | null;
+  /** Nombre total annoncé par la source, pour la progression. */
+  readTotal?: number;
   rounding: RoundingMode;
   conflictPolicy: ConflictPolicy;
   testBatchSize: number;
   testBatchConfirmed: boolean;
   backupSavedAt?: string;
-  pause?: { kind: PauseError['kind'] | 'user'; message: string; at: string; url?: string };
+  pause?: {
+    kind: PauseError['kind'] | 'user';
+    message: string;
+    at: string;
+    url?: string;
+    /** Phase à reprendre. */
+    resumePhase: 'reading' | 'matching' | 'running';
+  };
 }
 
 export type PlannedAction =

@@ -106,7 +106,7 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
     if (isAbortError(e) || ctx.signal.aborted) throw e;
     if (e instanceof PauseError) {
       // La ligne garde son statut : si elle était `in_flight`, elle sera vérifiée à la reprise.
-      await saveJob({ phase: 'paused', pause: { kind: e.kind, message: e.message, at: now(), url: e.detail?.url } });
+      await saveJob({ phase: 'paused', pause: pauseInfo(e, now(), 'running') });
       return 'paused';
     }
     const latest = (await store.getRow(jobId, row.rowId)) ?? row;
@@ -134,6 +134,10 @@ export async function runUntilStopped(jobId: string, deps: RunnerDeps): Promise<
   }
 }
 
+export function pauseInfo(e: PauseError, at: string, resumePhase: NonNullable<TransferJob['pause']>['resumePhase']) {
+  return { kind: e.kind, message: e.message, at, resumePhase, ...(e.detail?.url && { url: e.detail.url }) };
+}
+
 async function transition(store: JobStore, jobId: string, from: TransferJob['phase'][], patch: Partial<TransferJob>) {
   const job = await store.getJob(jobId);
   if (!job || !from.includes(job.phase)) return false;
@@ -151,11 +155,22 @@ export async function startWriting(store: JobStore, jobId: string): Promise<bool
 export const confirmTestBatch = (store: JobStore, jobId: string) =>
   transition(store, jobId, ['awaiting_confirmation'], { phase: 'running', testBatchConfirmed: true });
 
-export const pauseByUser = (store: JobStore, jobId: string) =>
-  transition(store, jobId, ['running'], {
+export async function pauseByUser(store: JobStore, jobId: string): Promise<boolean> {
+  const job = await store.getJob(jobId);
+  if (!job || !(job.phase === 'reading' || job.phase === 'matching' || job.phase === 'running')) return false;
+  return transition(store, jobId, [job.phase], {
     phase: 'paused',
-    pause: { kind: 'user', message: 'Mis en pause par vous.', at: new Date().toISOString() },
+    pause: { kind: 'user', message: 'Mis en pause par vous.', at: new Date().toISOString(), resumePhase: job.phase },
   });
+}
 
-export const resume = (store: JobStore, jobId: string) =>
-  transition(store, jobId, ['paused'], { phase: 'running', pause: undefined });
+export async function resume(store: JobStore, jobId: string): Promise<boolean> {
+  const job = await store.getJob(jobId);
+  if (!job || job.phase !== 'paused') return false;
+  return transition(store, jobId, ['paused'], { phase: job.pause?.resumePhase ?? 'running', pause: undefined });
+}
+
+export const cancel = (store: JobStore, jobId: string) =>
+  transition(store, jobId, ['reading', 'matching', 'review', 'running', 'awaiting_confirmation', 'paused'], {
+    phase: 'cancelled',
+  });
