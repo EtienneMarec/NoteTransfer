@@ -92,7 +92,11 @@ export interface PlatformAdapter {
 
   /** Lecture paginée par curseur, pour reprendre après une suspension. */
   readRatings?(ctx: AdapterContext, cursor: string | null): Promise<Page<PivotEntry>>;
-  parseExport?(fileName: string, content: string): Promise<PivotEntry[]>;
+  /** Lecture d'un fichier d'export officiel choisi par l'utilisateur. */
+  parseExport?(file: { name: string; bytes: Uint8Array }): Promise<PivotEntry[]>;
+  /** Fichiers acceptés par le sélecteur (attribut `accept`). */
+  exportFileTypes?: string;
+  exportInstructions?: string;
 
   searchFilm?(ctx: AdapterContext, query: WorkQuery): Promise<Candidate[]>;
   /** Reconnaît une URL de fiche collée par l'utilisateur pour corriger une correspondance. */

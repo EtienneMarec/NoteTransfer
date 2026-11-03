@@ -1,10 +1,11 @@
 import { canBeDestination, canBeSource, type PlatformAdapter } from '../core/adapter';
 import type { PlatformId } from '../core/pivot';
 import { allocine } from './allocine';
+import { imdb } from './imdb';
 import { senscritique } from './senscritique';
 
 /** Ajouter une plateforme : écrire son adaptateur, l'ajouter ici et déclarer ses origines dans core/permissions.ts. */
-export const ADAPTERS: readonly PlatformAdapter[] = [allocine, senscritique];
+export const ADAPTERS: readonly PlatformAdapter[] = [allocine, senscritique, imdb];
 
 export function getAdapter(id: PlatformId): PlatformAdapter {
   const a = ADAPTERS.find((x) => x.id === id);
