@@ -39,6 +39,16 @@ export function Preview({ job, rows, editable, onChanged }: { job: TransferJob; 
           </button>
         ))}
       </div>
+      {editable && filter === 'review' && visible.length > 0 && (
+        <p>
+          <button
+            onClick={() => act(send({ type: 'setRowsSelected', jobId: job.id, rowIds: visible.map((r) => r.rowId), selected: true }))}
+          >
+            Valider les {visible.length} ligne(s) affichée(s)
+          </button>{' '}
+          <span class="muted small">Après les avoir relues : rien d’incertain n’est inclus sans votre validation.</span>
+        </p>
+      )}
       {error && <p class="notice bad">{error}</p>}
       <div class="table-wrap">
         <table>
@@ -73,6 +83,9 @@ function Line({ job, row: r, editable, act }: { job: TransferJob; row: JobRow; e
   const chosen = r.match?.candidates.find((c) => c.candidate.ref.id === r.match?.ref?.id)?.candidate;
   const canSelect = editable && (isWriteAction(r.action) || r.action === 'skip_conflict' || r.action === 'skip_review');
   const written = r.status !== 'pending' || r.outcome;
+  const dst = getAdapter(job.destination);
+  // Destination par fichier : c'est l'importeur du site qui rapproche, rien à corriger ici.
+  const correctable = editable && dst.capabilities.write !== 'file';
 
   return (
     <tr>
@@ -107,7 +120,9 @@ function Line({ job, row: r, editable, act }: { job: TransferJob; row: JobRow; e
         )}
       </td>
       <td>
-        {r.match?.ref ? (
+        {r.match?.ref && dst.capabilities.write === 'file' ? (
+          <span class="muted small">{r.match.reason}</span>
+        ) : r.match?.ref ? (
           <>
             <a href={r.match.ref.url} target="_blank" rel="noreferrer">
               {chosen?.work.title ?? `#${r.match.ref.id}`}
@@ -123,7 +138,7 @@ function Line({ job, row: r, editable, act }: { job: TransferJob; row: JobRow; e
         ) : (
           <span class="muted">aucune</span>
         )}
-        {editable && (
+        {correctable && (
           <details>
             <summary class="small">Corriger</summary>
             {r.match && r.match.candidates.length > 0 && (

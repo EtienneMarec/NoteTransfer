@@ -59,6 +59,17 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
     act(send({ type: 'markBackupSaved', jobId }));
   }
 
+  function downloadImport() {
+    const files = dst.buildImportFiles?.(toWrite.map((r) => ({ work: r.entry.work, value: r.conversion!.value }))) ?? [];
+    for (const f of files) download(f.name, f.content, f.mimeType);
+    return files;
+  }
+
+  function generateImport() {
+    const files = downloadImport();
+    act(send({ type: 'completeFileExport', jobId, fileNames: files.map((f) => f.name) }));
+  }
+
   function saveReport() {
     const r = buildReport(job, rows);
     const base = `notes-transfert-rapport-${stampForFile()}`;
@@ -148,7 +159,34 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </div>
         )}
 
-        {job.phase === 'review' && (
+        {job.phase === 'review' && dst.capabilities.write === 'file' && (
+          <>
+            <h3>Fichier d’import {dst.displayName}</h3>
+            {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}
+            <p class="muted small">
+              Les lignes « à vérifier » seront rapprochées par {dst.displayName} sur le titre et l’année : cochez celles que vous voulez inclure
+              (filtre « À vérifier », puis « Valider les lignes affichées »).
+            </p>
+            <div class="row">
+              <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
+              <button class="primary" disabled={!toWrite.length} onClick={generateImport}>
+                Générer le fichier d’import ({toWrite.length} film(s))
+              </button>
+            </div>
+          </>
+        )}
+
+        {job.phase === 'done' && dst.capabilities.write === 'file' && dst.importInstructions && (
+          <div class="notice ok">
+            <p>
+              <strong>Dernière étape, sur {dst.displayName} :</strong>
+            </p>
+            <p>{dst.importInstructions}</p>
+            <button onClick={() => downloadImport()}>Télécharger à nouveau le fichier d’import</button>
+          </div>
+        )}
+
+        {job.phase === 'review' && dst.capabilities.write !== 'file' && (
           <>
             <h3>Avant d’écrire</h3>
             {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}

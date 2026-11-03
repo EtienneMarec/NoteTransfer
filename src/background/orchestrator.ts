@@ -2,7 +2,17 @@ import { getAdapter } from '../adapters/registry';
 import type { AdapterContext, PlatformAdapter, SessionStatus } from '../core/adapter';
 import { isAbortError, PauseError } from '../core/errors';
 import { createHttpClient, DEFAULT_POLICY } from '../core/http/client';
-import { newJob, runMatchStep, runReadStep, setConflictPolicy, setRowMatch, setRowSelected } from '../core/job/pipeline';
+import {
+  completeFileExport,
+  importEntries,
+  newJob,
+  runMatchStep,
+  runReadStep,
+  setConflictPolicy,
+  setRowMatch,
+  setRowSelected,
+  setRowsSelected,
+} from '../core/job/pipeline';
 import { cancel, confirmTestBatch, pauseByUser, resume, runWriteStep, startWriting } from '../core/job/runner';
 import { openJobStore, type JobStore } from '../core/job/store';
 import type { TransferJob } from '../core/job/types';
@@ -186,12 +196,23 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
     }
     case 'createJob': {
       if (driving) throw new Error('Un transfert est déjà en cours');
-      const job = newJob(req.job);
+      const fromFile = getAdapter(req.job.source).capabilities.read === 'file';
+      if (fromFile && !req.entries?.length) throw new Error('Aucun film lu dans le fichier');
+      // Une destination par fichier n'écrit rien sur un site : la simulation n'a pas de sens.
+      const toFile = getAdapter(req.job.destination).capabilities.write === 'file';
+      const job = newJob({ ...req.job, dryRun: toFile ? false : req.job.dryRun });
       await store.putJob(job);
+      if (fromFile) await importEntries(store, job, req.entries!);
       log.info(`Nouveau transfert ${job.source} → ${job.destination}${job.dryRun ? ' (simulation)' : ''}`);
       void drive(job.id);
       return { jobId: job.id };
     }
+    case 'setRowsSelected':
+      await locked(() => setRowsSelected(store, req.jobId, req.rowIds, req.selected));
+      return true;
+    case 'completeFileExport':
+      await locked(() => completeFileExport(store, req.jobId, req.fileNames));
+      return true;
     case 'listJobs':
       return (await store.listJobs()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     case 'getJob': {

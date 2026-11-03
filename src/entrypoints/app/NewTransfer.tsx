@@ -3,7 +3,7 @@ import { destinationsFor, getAdapter, sources } from '../../adapters/registry';
 import { send, type Settings } from '../../background/messages';
 import type { SessionStatus } from '../../core/adapter';
 import type { RoundingMode } from '../../core/convert';
-import type { PlatformId } from '../../core/pivot';
+import type { PivotEntry, PlatformId } from '../../core/pivot';
 
 const SESSION_LABELS: Record<SessionStatus['state'], string> = {
   ok: 'connecté',
@@ -24,6 +24,7 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   const [sessions, setSessions] = useState<Partial<Record<PlatformId, SessionStatus>>>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [file, setFile] = useState<{ name: string; entries: PivotEntry[] }>();
 
   useEffect(() => {
     void send({ type: 'getSettings' }).then(setSettings);
@@ -31,26 +32,45 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   useEffect(() => {
     if (!dests.some((d) => d.id === destination)) setDestination(dests[0]?.id);
     setSessions(undefined);
+    setFile(undefined);
   }, [source]);
 
   const src = getAdapter(source);
   const dst = destination ? getAdapter(destination) : undefined;
+  const fromFile = src.capabilities.read === 'file';
+  const toFile = dst?.capabilities.write === 'file';
   const warning = src.capabilities.termsWarning;
   const alreadyAccepted = !!settings?.termsAccepted[source];
   const termsOk = !warning || alreadyAccepted || accepted;
-  const sessionsOk = sessions && destination && sessions[source]?.state === 'ok' && sessions[destination]?.state === 'ok';
+  // Seules les plateformes qui passent par un site ont une session à vérifier.
+  const online = [src, dst].filter((a): a is NonNullable<typeof a> => !!a && a.hostPermissions.length > 0);
+  const sessionsOk = online.every((a) => sessions?.[a.id]?.state === 'ok');
+  const sourceReady = !fromFile || !!file?.entries.length;
+
+  async function readFile(f: File | undefined) {
+    setFile(undefined);
+    setError(undefined);
+    if (!f || !src.parseExport) return;
+    try {
+      const entries = await src.parseExport({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
+      if (!entries.length) throw new Error('Aucun film trouvé dans ce fichier.');
+      setFile({ name: f.name, entries });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
 
   // permissions.request doit être appelé directement dans le gestionnaire de clic.
   function checkSessions() {
     if (!dst) return;
     setError(undefined);
     setBusy(true);
-    const origins = [...new Set([...src.hostPermissions, ...dst.hostPermissions])];
+    const origins = [...new Set(online.flatMap((a) => a.hostPermissions))];
     const granted = origins.length ? browser.permissions.request({ origins }) : Promise.resolve(true);
     void granted
       .then(async (ok) => {
         if (!ok) throw new Error('Autorisation refusée : l’extension ne peut pas accéder à ces sites.');
-        setSessions(await send({ type: 'checkSessions', platforms: [source, dst.id] }));
+        setSessions(await send({ type: 'checkSessions', platforms: online.map((a) => a.id) }));
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setBusy(false));
@@ -66,7 +86,8 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
       }
       const { jobId } = await send({
         type: 'createJob',
-        job: { source, destination: dst.id, dryRun, rounding, conflictPolicy: 'keep', testBatchSize },
+        job: { source, destination: dst.id, dryRun: !toFile && dryRun, rounding, conflictPolicy: 'keep', testBatchSize },
+        ...(fromFile && file && { entries: file.entries }),
       });
       onCreated(jobId);
     } catch (e) {
@@ -101,26 +122,53 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
       </div>
       {!dests.length && <p class="notice warn">Aucune destination n’est encore disponible pour cette source.</p>}
 
+      {fromFile && (
+        <>
+          <h3>Fichier d’export {src.displayName}</h3>
+          <p class="muted small">{src.exportInstructions}</p>
+          <input
+            type="file"
+            accept={src.exportFileTypes}
+            onChange={(e) => void readFile((e.target as HTMLInputElement).files?.[0])}
+            aria-label={`Fichier d’export ${src.displayName}`}
+          />
+          {file && (
+            <p class="notice ok">
+              {file.entries.length} film(s) lu(s) dans {file.name}, dont {file.entries.filter((e) => e.rating).length} noté(s). Le fichier
+              est lu dans ce navigateur, sans être envoyé nulle part.
+            </p>
+          )}
+        </>
+      )}
+
       <h3>Options</h3>
       <div class="grid2">
-        <label class="check">
-          <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun((e.target as HTMLInputElement).checked)} />
-          <span>
-            <strong>Mode simulation</strong>
-            <br />
-            <span class="muted small">Tout le parcours, sans aucune écriture sur la destination.</span>
-          </span>
-        </label>
-        <label class="field">
-          Taille du lot de test
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={testBatchSize}
-            onChange={(e) => setTestBatchSize(Math.max(1, Number((e.target as HTMLInputElement).value) || 1))}
-          />
-        </label>
+        {toFile ? (
+          <p class="muted small">
+            {dst?.displayName} se remplit par son importeur officiel : l’extension génère le fichier, vous l’importez vous-même sur le site.
+          </p>
+        ) : (
+          <>
+            <label class="check">
+              <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun((e.target as HTMLInputElement).checked)} />
+              <span>
+                <strong>Mode simulation</strong>
+                <br />
+                <span class="muted small">Tout le parcours, sans aucune écriture sur la destination.</span>
+              </span>
+            </label>
+            <label class="field">
+              Taille du lot de test
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={testBatchSize}
+                onChange={(e) => setTestBatchSize(Math.max(1, Number((e.target as HTMLInputElement).value) || 1))}
+              />
+            </label>
+          </>
+        )}
         <label class="field">
           Arrondi si la conversion est inexacte
           <select value={rounding} onChange={(e) => setRounding((e.target as HTMLSelectElement).value as RoundingMode)}>
@@ -149,45 +197,49 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
         </div>
       )}
 
-      <h3>Sessions</h3>
-      <p class="muted small">
-        L’extension utilise les sessions déjà ouvertes dans ce navigateur. Elle ne demande ni ne stocke aucun mot de passe.
-      </p>
-      <div class="row">
-        <button onClick={checkSessions} disabled={busy || !dst}>
-          Autoriser l’accès et vérifier les sessions
-        </button>
-        {sessions &&
-          [source, destination].map((p) => {
-            const s = p && sessions[p];
-            if (!p || !s) return null;
-            return (
-              <span>
-                {getAdapter(p).displayName} :{' '}
-                <span class={`badge ${s.state === 'ok' ? 'done' : 'failed'}`}>
-                  {SESSION_LABELS[s.state]}
-                  {s.state === 'ok' && s.displayName ? ` (${s.displayName})` : ''}
-                </span>{' '}
-                {s.state === 'signed_out' && (
-                  <a href={s.loginUrl} target="_blank" rel="noreferrer">
-                    se connecter
-                  </a>
-                )}
-                {s.state === 'blocked' && s.url && (
-                  <a href={s.url} target="_blank" rel="noreferrer">
-                    ouvrir le site
-                  </a>
-                )}
-              </span>
-            );
-          })}
-      </div>
+      {online.length > 0 && (
+        <>
+          <h3>Sessions</h3>
+          <p class="muted small">
+            L’extension utilise les sessions déjà ouvertes dans ce navigateur. Elle ne demande ni ne stocke aucun mot de passe.
+          </p>
+          <div class="row">
+            <button onClick={checkSessions} disabled={busy || !dst}>
+              Autoriser l’accès et vérifier les sessions
+            </button>
+            {sessions &&
+              online.map(({ id: p }) => {
+                const s = sessions[p];
+                if (!s) return null;
+                return (
+                  <span>
+                    {getAdapter(p).displayName} :{' '}
+                    <span class={`badge ${s.state === 'ok' ? 'done' : 'failed'}`}>
+                      {SESSION_LABELS[s.state]}
+                      {s.state === 'ok' && s.displayName ? ` (${s.displayName})` : ''}
+                    </span>{' '}
+                    {s.state === 'signed_out' && (
+                      <a href={s.loginUrl} target="_blank" rel="noreferrer">
+                        se connecter
+                      </a>
+                    )}
+                    {s.state === 'blocked' && s.url && (
+                      <a href={s.url} target="_blank" rel="noreferrer">
+                        ouvrir le site
+                      </a>
+                    )}
+                  </span>
+                );
+              })}
+          </div>
+        </>
+      )}
 
       {error && <p class="notice bad">{error}</p>}
 
       <div class="row" style={{ marginTop: '16px' }}>
-        <button class="primary" disabled={busy || !sessionsOk || !termsOk} onClick={() => void start()}>
-          Lire mes notes {src.displayName}
+        <button class="primary" disabled={busy || !sessionsOk || !termsOk || !sourceReady || !dst} onClick={() => void start()}>
+          {fromFile ? `Préparer le transfert vers ${dst?.displayName ?? '…'}` : `Lire mes notes ${src.displayName}`}
         </button>
         {!termsOk && <span class="muted small">Acceptez l’avertissement pour continuer.</span>}
       </div>

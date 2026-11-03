@@ -1,7 +1,7 @@
 import type { SessionStatus } from '../core/adapter';
 import type { JobRow, TransferJob } from '../core/job/types';
 import type { LogRecord } from '../core/log';
-import type { PlatformId } from '../core/pivot';
+import type { PivotEntry, PlatformId } from '../core/pivot';
 
 export interface Settings {
   minDelayMs: number;
@@ -14,7 +14,14 @@ export const DEFAULT_SETTINGS: Settings = { minDelayMs: 2000, maxDelayMs: 4000, 
 
 export type Request =
   | { type: 'checkSessions'; platforms: PlatformId[] }
-  | { type: 'createJob'; job: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'> }
+  | {
+      type: 'createJob';
+      job: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'>;
+      /** Source par fichier : entrées déjà lues dans la page de l'application. */
+      entries?: PivotEntry[];
+    }
+  | { type: 'setRowsSelected'; jobId: string; rowIds: string[]; selected: boolean }
+  | { type: 'completeFileExport'; jobId: string; fileNames: string[] }
   | { type: 'listJobs' }
   | { type: 'getJob'; jobId: string }
   | { type: 'pause'; jobId: string }
@@ -36,6 +43,8 @@ export type Request =
 export interface Responses {
   checkSessions: Partial<Record<PlatformId, SessionStatus>>;
   createJob: { jobId: string };
+  setRowsSelected: true;
+  completeFileExport: true;
   listJobs: TransferJob[];
   getJob: { job: TransferJob; rows: JobRow[]; active: boolean } | null;
   pause: boolean;
