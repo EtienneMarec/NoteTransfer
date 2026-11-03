@@ -36,9 +36,9 @@ describe('gql', () => {
   });
 
   it('lève une erreur simple pour une erreur GraphQL métier', async () => {
-    const err = await gql(ctxWith(() => json(200, { errors: [{ message: 'Produit introuvable' }] })), 'https://x.test/', '{x}').catch(
-      (e: Error) => e,
-    );
+    const err = (await gql(ctxWith(() => json(200, { errors: [{ message: 'Produit introuvable' }] })), 'https://x.test/', '{x}').catch(
+      (e: unknown) => e,
+    )) as Error;
     expect(err).not.toBeInstanceOf(PauseError);
     expect(err.message).toBe('Produit introuvable');
   });
