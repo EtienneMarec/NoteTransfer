@@ -4,9 +4,11 @@ import { HOST_PERMISSIONS } from '../../core/permissions';
 import type { PivotEntry } from '../../core/pivot';
 import { SCALES } from '../../core/scales';
 
-// En-têtes de l'export « Your Ratings » (sources tierces, à confirmer sur un export réel).
+// En-têtes de l'export « Your Ratings », vérifiés sur un export réel le 2026-11-03.
 // Les noms sont comparés sans casse ni ponctuation : « Your Rating » = « your rating ».
-const MOVIE_TYPES = new Set(['movie', 'tvmovie', 'video']);
+// « Title Type » est traduit dans la langue du compte (« Film » en français) : on exclut
+// donc les types qui ne sont pas des films, plutôt que de lister ceux qui en sont.
+const NOT_A_MOVIE = /series|serie|episode|mini|show|podcast|game|jeu|emission/;
 
 const toInt = (s: string | undefined) => (s && /^\d+$/.test(s) ? Number(s) : undefined);
 
@@ -19,8 +21,11 @@ export function parseImdbRatings(text: string, fetchedAt: string): PivotEntry[] 
   for (const r of records) {
     const id = pick(r, 'Const');
     const rating = toInt(pick(r, 'Your Rating'));
-    const type = (pick(r, 'Title Type') ?? 'movie').toLowerCase().replace(/[^a-z]/g, '');
-    if (!id || !/^tt\d+$/.test(id) || !MOVIE_TYPES.has(type)) continue;
+    const type = (pick(r, 'Title Type') ?? '')
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase();
+    if (!id || !/^tt\d+$/.test(id) || NOT_A_MOVIE.test(type)) continue;
     const title = pick(r, 'Title') ?? id;
     const original = pick(r, 'Original Title');
     const year = toInt(pick(r, 'Year'));
