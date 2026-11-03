@@ -208,7 +208,8 @@ export interface PlatformAdapter {
 2. **Cache local** des correspondances déjà validées ou corrigées par l'utilisateur, avec la clé `source:id → dest:id` : classé « sûr ».
 3. **Recherche** sur la destination avec le titre FR, puis le titre original si besoin. Chaque candidat reçoit un score de 0 à 1 :
    - Titre : similarité après normalisation (minuscules, sans accents ni ponctuation, articles déplacés, « & » → « et »). La valeur retenue est le meilleur score parmi les combinaisons titre ↔ titre, titre ↔ titre original, etc. Poids 0,45.
-   - Année : 0,25 si identique, 0,15 à ±1 an (les dates de sortie FR et internationales diffèrent), 0 sinon. **Un écart de plus de 2 ans élimine le candidat.**
+   - Année : poids 0,25. Signal 1 si identique, 0,5 à ±1 an (les dates de sortie FR et internationales diffèrent), 0,2 à ±2 ans. **Un écart de plus de 2 ans élimine le candidat.**
+   - Seuls les signaux connus des deux côtés comptent, et le score est renormalisé sur leurs poids. Sans année, le score reste plafonné sous « sûr ». Un titre de similarité inférieure à 0,5 plafonne le score à cette similarité.
    - Réalisateur : 0,2 si un nom normalisé est commun.
    - Durée : 0,1 si l'écart est de 5 min au plus. Vu sur La Haine : 95 min sur AlloCiné contre 98 sur SensCritique, donc la tolérance doit être large.
    - Pénalité si deux candidats ont des scores proches (écart inférieur à 0,1) : classé « à vérifier ».
