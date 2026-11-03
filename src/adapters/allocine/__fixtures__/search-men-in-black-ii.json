@@ -1,0 +1,19 @@
+{
+  "_comment": "Réponse réelle de graph.allocine.fr/v1/public (2026-11-03) à search(text: \"Men in Black II\", types: [Movie], first: 10). Aucune donnée personnelle.",
+  "data": {
+    "search": {
+      "edges": [
+        { "node": { "node": { "__typename": "Movie", "internalId": 10700, "title": "Men in Black", "originalTitle": "Men in Black", "data": { "productionYear": 1997 }, "runtime": "PT1H38M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Barry", "lastName": "Sonnenfeld" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 1000036824, "title": "Men in Black 5", "originalTitle": "Men in Black 5", "data": { "productionYear": 2028 }, "runtime": null, "credits": { "edges": [] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 139622, "title": "Men In Black III", "originalTitle": "Men In Black III", "data": { "productionYear": 2012 }, "runtime": "PT1H44M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Barry", "lastName": "Sonnenfeld" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 28355, "title": "MIIB", "originalTitle": "Men in Black II", "data": { "productionYear": 2002 }, "runtime": "PT1H30M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Barry", "lastName": "Sonnenfeld" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 210317, "title": "Men In Black: International", "originalTitle": "Men In Black: International", "data": { "productionYear": 2019 }, "runtime": "PT1H55M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "F. Gary", "lastName": "Gray" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 117308, "title": "Men suddenly in black", "originalTitle": "Daai cheung foo", "data": { "productionYear": 2003 }, "runtime": "PT0H0M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Ho-Cheung", "lastName": "Pang" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 206064, "title": "Men in Black Alien Attack", "originalTitle": "Men in Black Alien Attack", "data": { "productionYear": 2000 }, "runtime": "PT0H4M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "David C.", "lastName": "Cobb" } } }, { "node": { "person": { "firstName": "Lyonal", "lastName": "Coleman" } } }, { "node": { "person": { "firstName": "Linda", "lastName": "Hassani" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 315061, "title": "Man in Black", "originalTitle": "Man in Black", "data": { "productionYear": 2023 }, "runtime": "PT1H0M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Wang", "lastName": "Bing" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 247738, "title": "Inside men", "originalTitle": "Nae-bu-ja-deul", "data": { "productionYear": 2015 }, "runtime": "PT2H10M0S", "credits": { "edges": [{ "node": { "person": { "firstName": "Min-ho", "lastName": "Woo" } } }] } } } },
+        { "node": { "node": { "__typename": "Movie", "internalId": 1000034900, "title": "Back In Black", "originalTitle": "Back In Black", "data": { "productionYear": 2026 }, "runtime": null, "credits": { "edges": [{ "node": { "person": { "firstName": "Ron", "lastName": "Murphy" } } }] } } } }
+      ]
+    }
+  }
+}

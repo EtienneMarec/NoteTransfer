@@ -39,8 +39,10 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   const dst = destination ? getAdapter(destination) : undefined;
   const fromFile = src.capabilities.read === 'file';
   const toFile = dst?.capabilities.write === 'file';
-  const warning = src.capabilities.termsWarning;
-  const alreadyAccepted = !!settings?.termsAccepted[source];
+  // Plateforme dont les CGU posent problème (AlloCiné), qu'elle soit source ou destination.
+  const warned = [src, dst].find((a) => a?.capabilities.termsWarning);
+  const warning = warned?.capabilities.termsWarning;
+  const alreadyAccepted = !!warned && !!settings?.termsAccepted[warned.id];
   const termsOk = !warning || alreadyAccepted || accepted;
   // Seules les plateformes qui passent par un site ont une session à vérifier.
   const online = [src, dst].filter((a): a is NonNullable<typeof a> => !!a && a.hostPermissions.length > 0);
@@ -81,8 +83,8 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
     setBusy(true);
     setError(undefined);
     try {
-      if (warning && !alreadyAccepted) {
-        await send({ type: 'saveSettings', settings: { ...settings, termsAccepted: { ...settings.termsAccepted, [source]: new Date().toISOString() } } });
+      if (warned && !alreadyAccepted) {
+        await send({ type: 'saveSettings', settings: { ...settings, termsAccepted: { ...settings.termsAccepted, [warned.id]: new Date().toISOString() } } });
       }
       const { jobId } = await send({
         type: 'createJob',
@@ -182,12 +184,12 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
         Une note déjà présente sur la destination n’est jamais écrasée par défaut : vous choisirez ligne par ligne dans l’aperçu.
       </p>
 
-      {warning && (
+      {warned && warning && (
         <div class="notice warn">
-          <strong>Avertissement – {src.displayName}</strong>
+          <strong>Avertissement – {warned.displayName}</strong>
           <p>{warning}</p>
           {alreadyAccepted ? (
-            <p class="small">Accepté le {new Date(settings!.termsAccepted[source]!).toLocaleString('fr-FR')}.</p>
+            <p class="small">Accepté le {new Date(settings!.termsAccepted[warned.id]!).toLocaleString('fr-FR')}.</p>
           ) : (
             <label class="check">
               <input type="checkbox" checked={accepted} onChange={(e) => setAccepted((e.target as HTMLInputElement).checked)} />
