@@ -1,6 +1,5 @@
 import type { SessionStatus } from '../core/adapter';
 import type { JobRow, TransferJob } from '../core/job/types';
-import type { LogRecord } from '../core/log';
 import type { PivotEntry, PlatformId } from '../core/pivot';
 
 export interface Settings {
@@ -40,7 +39,6 @@ export type Request =
   | { type: 'confirmTestBatch'; jobId: string }
   | { type: 'getSettings' }
   | { type: 'saveSettings'; settings: Settings }
-  | { type: 'getLogs' }
   | { type: 'deleteAll' };
 
 export interface Responses {
@@ -66,7 +64,6 @@ export interface Responses {
   confirmTestBatch: boolean;
   getSettings: Settings;
   saveSettings: true;
-  getLogs: LogRecord[];
   deleteAll: true;
 }
 

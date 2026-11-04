@@ -19,21 +19,18 @@ import {
 import { cancel, confirmTestBatch, pauseByUser, resume, runWriteStep, startWriting } from '../core/job/runner';
 import { openJobStore, type JobStore } from '../core/job/store';
 import type { TransferJob } from '../core/job/types';
-import { createLogger, type LogRecord } from '../core/log';
+import { silentLogger } from '../core/log';
 import { OPTIONAL_HOST_PERMISSIONS } from '../core/permissions';
 import type { PlatformId } from '../core/pivot';
 import { DEFAULT_SETTINGS, type Request, type Responses, type Settings } from './messages';
 import { fetchTransport, siteTransport, TabPool } from './site-bridge';
 
 const ALARM = 'notes-transfert-tick';
-const LOG_LIMIT = 300;
 const ACTIVE_PHASES: TransferJob['phase'][] = ['reading', 'matching', 'running'];
 
-const logs: LogRecord[] = [];
-const log = createLogger((r) => {
-  logs.push(r);
-  if (logs.length > LOG_LIMIT) logs.shift();
-});
+// Aucun journal n'est conservé en version publiée : les erreurs utiles à l'utilisateur
+// sont dans l'état du transfert (pause, raison d'échec par ligne).
+const log = silentLogger;
 
 let storePromise: Promise<JobStore> | undefined;
 const getStore = () => (storePromise ??= openJobStore());
@@ -120,13 +117,11 @@ async function drive(jobId: string): Promise<void> {
       if (outcome !== 'progressed') {
         const job = await store.getJob(jobId);
         if (job && ACTIVE_PHASES.includes(job.phase) && outcome === 'idle') continue; // changement de phase
-        if (job?.phase === 'paused') log.warn(`Transfert en pause : ${job.pause?.message}`);
         return;
       }
     }
   } catch (e) {
     if (!isAbortError(e)) {
-      log.error('Erreur inattendue', { message: e instanceof Error ? e.message : String(e) });
       const store = await getStore();
       const job = await store.getJob(jobId);
       if (job && ACTIVE_PHASES.includes(job.phase)) {
@@ -209,7 +204,6 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
       const job = newJob({ ...req.job, writeMode: manual ? 'manual' : 'auto', dryRun: noSiteWrite ? false : req.job.dryRun });
       await store.putJob(job);
       if (fromFile) await importEntries(store, job, req.entries!);
-      log.info(`Nouveau transfert ${job.source} → ${job.destination}${job.dryRun ? ' (simulation)' : ''}`);
       void drive(job.id);
       return { jobId: job.id };
     }
@@ -294,13 +288,10 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
     case 'saveSettings':
       await browser.storage.local.set({ settings: req.settings });
       return true;
-    case 'getLogs':
-      return [...logs];
     case 'deleteAll': {
       driving?.abort.abort();
       await locked(() => store.clearAll());
       await browser.storage.local.clear();
-      logs.length = 0;
       await tabs.closeCreated();
       await browser.permissions.remove({ origins: OPTIONAL_HOST_PERMISSIONS }).catch(() => false);
       return true;

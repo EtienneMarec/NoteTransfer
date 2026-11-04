@@ -56,7 +56,6 @@ function App() {
 function SettingsPanel() {
   const [s, setS] = useState<Settings>();
   const [saved, setSaved] = useState(false);
-  const [logs, setLogs] = useState<string>();
   useEffect(() => void send({ type: 'getSettings' }).then(setS), []);
   if (!s) return null;
   const num = (v: string) => Math.max(500, Number(v) || 0);
@@ -84,10 +83,6 @@ function SettingsPanel() {
           </button>
         </p>
       )}
-      <details onToggle={() => void send({ type: 'getLogs' }).then((l) => setLogs(l.map((r) => `${r.at} ${r.level} ${r.msg}`).join('\n')))}>
-        <summary>Journal (sans cookies ni jetons)</summary>
-        <pre class="logs">{logs || 'Vide.'}</pre>
-      </details>
     </section>
   );
 }

@@ -77,4 +77,3 @@ a { color: var(--accent); }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
 .tabs button[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 details summary { cursor: pointer; }
-pre.logs { max-height: 240px; overflow: auto; font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
