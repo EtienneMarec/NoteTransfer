@@ -91,6 +91,7 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | `mainSearch` et `title(id)` | ✅ fixture réelle |
 | AlloCiné (6 films) → IMDb, vrai adaptateur et vrai moteur d'écriture : 3 créées et vérifiées, 3 identiques ignorées | ✅ contre-vérifié par lecture directe |
 | Mode « à la main » (liste, coches, export IMDb pour écarter les films déjà notés) | 🧪 fixtures ; ⏳ à essayer dans Firefox |
+| Mode « à la main » vers AlloCiné : lien de recherche généré | ✅ ouvre la bonne recherche (« À bout de souffle » en tête) ; le reste 🧪 fixtures |
 | Écriture automatique dans l'extension chargée dans Firefox | ⏳ |
 
 ## AlloCiné comme destination, compte de test (2026-11-03)

@@ -7,6 +7,7 @@ import { HOST_PERMISSIONS } from '../../core/permissions';
 import { SCALES } from '../../core/scales';
 import {
   entityIdOf,
+  manualLink,
   parseAcUrl,
   parseMoviesRated,
   parseSearch,
@@ -58,6 +59,13 @@ export const allocine: PlatformAdapter = {
     tabPatterns: ['https://mon.allocine.fr/*'],
     auth: { cookie: 'GraphToken', header: 'Authorization', prefix: 'Bearer ' },
     loginUrl: LOGIN_URL,
+  },
+  manualWrite: {
+    linkFor: manualLink,
+    instructions:
+      'Ouvrez chaque lien, choisissez le bon film dans la recherche AlloCiné (titre, année, réalisateur), ' +
+      'mettez la note indiquée, puis cochez « Fait ». AlloCiné n’ayant pas d’export, l’extension ne peut pas ' +
+      'repérer les films que vous avez déjà notés : vérifiez la note affichée sur la fiche avant de la changer.',
   },
 
   async checkSession(ctx) {

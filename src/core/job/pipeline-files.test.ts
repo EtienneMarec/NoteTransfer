@@ -123,6 +123,23 @@ describe('AlloCiné → IMDb « à la main »', () => {
   });
 });
 
+describe('IMDb → AlloCiné « à la main »', () => {
+  it('prépare la liste sans aucune requête vers AlloCiné', async () => {
+    const job = newJob({ source: 'imdb', destination: 'allocine', dryRun: false, writeMode: 'manual', rounding: 'nearest', conflictPolicy: 'keep', testBatchSize: 3 });
+    await store.putJob(job);
+    await importEntries(store, job, parseImdbRatings(imdbRealCsv, ''));
+    const deps = { store, source: imdb, destination: allocine, sourceCtx: ctx, destinationCtx: ctx };
+    while ((await runMatchStep(job.id, deps)) === 'progressed');
+    const rows = await store.getRows(job.id);
+    expect(rows.map((r) => [r.entry.work.title, r.conversion?.value, r.match?.ref?.url, r.selected])).toEqual([
+      ['À bout de souffle', 3.5, 'https://www.allocine.fr/rechercher/movie/?q=%C3%80%20bout%20de%20souffle', true],
+      ['Forrest Gump', 3, 'https://www.allocine.fr/rechercher/movie/?q=Forrest%20Gump', true],
+      ['La Haine', 4, 'https://www.allocine.fr/rechercher/movie/?q=La%20Haine', true],
+    ]);
+    expect(await startManual(store, job.id)).toBe(true);
+  });
+});
+
 describe('AlloCiné → Letterboxd (fichier)', () => {
   it('demande une validation manuelle faute d’identifiant, puis inclut les lignes validées', async () => {
     const entries = [page1, page2].flatMap((p) => parseMoviesRated(p.data as MoviesRatedResponse, '').items);

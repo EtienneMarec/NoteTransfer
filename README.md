@@ -12,7 +12,7 @@ Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transf�
 
 | Plateforme | Source | Destination | Méthode | État |
 |---|---|---|---|---|
-| AlloCiné | ✅ | ✅ | API interne du site, depuis un onglet AlloCiné | Lecture vérifiée sur le vrai site ; recherche et écriture vérifiées sur un compte de test (hors extension chargée) |
+| AlloCiné | ✅ | ✅ | API interne du site, depuis un onglet AlloCiné ; écriture aussi possible « à la main » | Lecture vérifiée sur le vrai site ; recherche et écriture vérifiées sur un compte de test (hors extension chargée) |
 | SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Recherche, note existante et écriture vérifiées sur le vrai site (Firefox) ; la lecture comme source n'a été testée que par requête directe |
 | Letterboxd | ✅ | ✅ | Fichiers officiels : export (ZIP ou `ratings.csv`) en entrée, fichier pour l'importeur en sortie | Export réel lu ; fichier généré importé avec succès sur un compte de test |
 | IMDb | ✅ | ✅ | Lecture : fichier CSV d'export officiel. Écriture : API interne du site (avertissement) **ou** « à la main » | Export réel lu ; écriture automatique vérifiée sur un compte de test (hors extension chargée) ; mode à la main testé sur fixtures |
@@ -23,7 +23,7 @@ Le détail de chaque plateforme (méthodes, authentification, pagination, échel
 
 ### Limites à connaître
 
-- **AlloCiné** : ses CGU interdisent l'extraction automatisée de données (art. 7.5 et 8.1), et le site peut suspendre un compte sans préavis (art. 9). L'extension affiche cet avertissement et attend votre accord avant la première lecture. AlloCiné ne fournit pas de date de notation.
+- **AlloCiné** : ses CGU interdisent l'extraction automatisée de données (art. 7.5 et 8.1), et le site peut suspendre un compte sans préavis (art. 9). L'extension affiche cet avertissement et attend votre accord avant le premier usage. Comme destination, AlloCiné peut aussi être rempli **à la main** : l'extension prépare la liste (note et lien de recherche), vous notez vous-même, sans aucune requête vers AlloCiné. AlloCiné ne fournit pas de date de notation.
 - **SensCritique** : noter un film le marque comme vu et le retire de vos envies.
 - **Letterboxd** : l'extension génère le fichier, et c'est vous qui l'importez sur letterboxd.com/import. Letterboxd fait lui-même le rapprochement des films : par identifiant IMDb quand la source en fournit (export IMDb), sinon par titre, année et réalisateur. Ces lignes doivent donc être validées dans l'aperçu, puis vérifiées dans le récapitulatif de Letterboxd. **L'importeur remplace sans prévenir une note déjà présente**, et un import ne peut pas être annulé : ajoutez votre export Letterboxd actuel dans l'aperçu pour que l'extension retrouve et conserve ces notes. L'importeur est normalement réservé aux membres Pro, et limité à 1 900 titres par fichier.
 - **IMDb** : la lecture se fait à partir de son fichier d'export. Pour écrire, IMDb n'offre ni import ni API publique, donc deux modes :

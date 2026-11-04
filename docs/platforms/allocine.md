@@ -129,6 +129,15 @@ Source : <https://www.allocine.fr/service/conditions.html> (mise à jour du 16/0
 - **Critiques** : l'effet d'une mutation sans `review` sur une critique existante n'a pas été testé, car cela suppose de publier une critique publique. Par prudence, **l'adaptateur ne modifie jamais un film qui a une critique** et l'indique dans le rapport.
 - **Bout en bout** : export IMDb réel → AlloCiné avec le vrai adaptateur et le vrai moteur d'écriture. Les 3 films sont rapprochés de façon « sûre » ; 2 notes identiques sont ignorées, et La Haine (8/10 → 4/5) est **créée, relue et vérifiée** ✅
 
+## Mode « à la main » (décision du 2026-11-04)
+
+Pour qui ne veut pas automatiser AlloCiné comme destination, à cause des CGU :
+
+- L'extension prépare la liste : film, note convertie, et lien vers la fiche si le film vient d'AlloCiné, sinon vers `https://www.allocine.fr/rechercher/movie/?q=<titre>`. Le lien a été vérifié : « À bout de souffle » arrive en tête ✅. L'année n'est pas mise dans la recherche.
+- L'utilisateur note lui-même, puis coche « Fait » ou « Sauter ». Aucune requête n'est envoyée à AlloCiné, aucune permission n'est demandée, et l'avertissement CGU ne s'affiche pas.
+- Limite : AlloCiné n'a pas d'export, donc les films déjà notés ne peuvent pas être écartés à l'avance. Les instructions demandent de vérifier la note affichée sur la fiche avant de la changer.
+- Testé sur fixtures uniquement (pipeline IMDb → AlloCiné à la main).
+
 ## Reste à vérifier
 
 1. Taille de page maximale sur un gros compte.

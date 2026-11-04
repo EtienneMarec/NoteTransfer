@@ -96,6 +96,17 @@ export function parseSearch(data: SearchResponse): Candidate[] {
     .map((work) => ({ ref: work.refs[0]!, work }));
 }
 
+/**
+ * Lien du mode « à la main » : fiche exacte si le film vient déjà d'AlloCiné, sinon la page de recherche
+ * du site (vérifiée : /rechercher/movie/?q=…). La recherche porte sur le titre affiché, sans l'année,
+ * qui perturberait les résultats ; AlloCiné indexe aussi les titres originaux.
+ */
+export function manualLink(work: PivotWork): { url: string; exact: boolean } {
+  const ref = work.refs.find((r) => r.platform === 'allocine');
+  if (ref) return { url: filmUrl(ref.id), exact: true };
+  return { url: `https://www.allocine.fr/rechercher/movie/?q=${encodeURIComponent(work.title)}`, exact: false };
+}
+
 /** `https://www.allocine.fr/film/fichefilm_gen_cfilm=12551.html` → id 12551. */
 export function parseAcUrl(url: string): PlatformRef | null {
   try {

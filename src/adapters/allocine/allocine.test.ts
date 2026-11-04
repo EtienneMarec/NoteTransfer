@@ -8,7 +8,7 @@ import searchMib from './__fixtures__/search-men-in-black-ii.json';
 import { PauseError } from '../../core/errors';
 import { decideMatch } from '../../core/match/score';
 import { allocine } from './index';
-import { entityIdOf, parseAcUrl, parseMoviesRated, type MoviesRatedResponse } from './parse';
+import { entityIdOf, manualLink, parseAcUrl, parseMoviesRated, type MoviesRatedResponse } from './parse';
 
 function ctxReplying(responses: unknown[]) {
   const requests: Array<{ req: HttpRequest; body: { query: string; variables: Record<string, unknown> } }> = [];
@@ -183,6 +183,18 @@ describe('allocine comme destination', () => {
   it('met en pause pendant une maintenance d’AlloCiné', async () => {
     const { ctx } = ctxRouting(() => ({ socialApiMaintenance: true }));
     await expect(allocine.writeRating!(ctx, { platform: 'allocine', id: '1' }, 3)).rejects.toBeInstanceOf(PauseError);
+  });
+
+  it('propose aussi le mode « à la main », avec une recherche AlloCiné ou la fiche exacte', () => {
+    expect(allocine.manualWrite).toBeDefined();
+    expect(manualLink({ kind: 'movie', title: 'Breathless', year: 1960, externalIds: {}, refs: [{ platform: 'letterboxd', id: 'x' }] })).toEqual({
+      url: 'https://www.allocine.fr/rechercher/movie/?q=Breathless',
+      exact: false,
+    });
+    expect(manualLink({ kind: 'movie', title: 'La Haine', externalIds: {}, refs: [{ platform: 'allocine', id: '12551' }] })).toEqual({
+      url: 'https://www.allocine.fr/film/fichefilm_gen_cfilm=12551.html',
+      exact: true,
+    });
   });
 
   it('reconnaît une adresse de fiche film', () => {
