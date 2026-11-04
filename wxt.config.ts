@@ -7,6 +7,12 @@ export default defineConfig({
   outDir: 'dist',
   manifestVersion: 3,
   vite: () => ({ plugins: [preact()] }),
+  zip: {
+    artifactTemplate: 'notes-transfert-{{version}}-{{browser}}.zip',
+    sourcesTemplate: 'notes-transfert-{{version}}-sources.zip',
+    // Archive des sources exigée par addons.mozilla.org pour le code compilé : sans fichiers locaux ni builds.
+    excludeSources: ['.local-tests/**', 'dist/**', '.wxt/**', 'node_modules/**', '.claude/**'],
+  },
   manifest: ({ browser }) => ({
     name: 'Notes Transfert',
     description: "Transférez vos notes de films d'une plateforme à une autre, en local.",
@@ -17,7 +23,8 @@ export default defineConfig({
     ...(browser === 'firefox' && {
       browser_specific_settings: {
         gecko: {
-          id: 'notes-transfert@local',
+          // Identifiant définitif : le changer ferait perdre les données des installations existantes.
+          id: '{0ff0c5f4-4a4f-4db4-9b7a-9e3e4306817f}',
           strict_min_version: '140.0',
           // Aucune donnée n'est collectée ni transmise au développeur.
           data_collection_permissions: { required: ['none'] },
