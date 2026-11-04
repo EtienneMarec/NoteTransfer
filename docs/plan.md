@@ -200,7 +200,7 @@ export interface PlatformAdapter {
 | AlloCiné | `site` | `site` (jamais sur un film avec critique) | 0,5–5 / 0,5 | — |
 | SensCritique | `site` | `site` | 1–10 / 1 | — |
 | Letterboxd | `file` | `file` | 0,5–5 / 0,5 | — (import : imdb, tmdb) |
-| IMDb | `file` | — | 1–10 / 1 | imdb |
+| IMDb | `file` | `site` (avertissement) ou « à la main » | 1–10 / 1 | imdb |
 | ~~Trakt~~ | hors périmètre | | | |
 | ~~TMDB~~ | hors périmètre | | | |
 

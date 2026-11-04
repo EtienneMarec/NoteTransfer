@@ -45,6 +45,8 @@ L'interface complète est dans `src/core/adapter.ts`. Les points essentiels :
 | `writeRating(ctx, ref, value)` | `value` est déjà dans l'échelle de la plateforme. Une écriture doit être idempotente. |
 | `parseUrl` / `getFilm` | Permettent à l'utilisateur de corriger une correspondance en collant l'adresse d'une fiche. |
 | `parseExport` / `buildImportFiles` | Pour les plateformes par fichiers (`read: 'file'` / `write: 'file'`), avec `importInstructions`. |
+| `manualWrite` | Mode « à la main » : `linkFor(work)` renvoie la fiche exacte ou une recherche, plus des instructions. Aucune requête n'est envoyée. Si l'adaptateur a aussi `write: 'site'`, l'interface propose le choix des deux modes. |
+| `site.credentials` | `'include'` quand l'API est sur un autre domaine que la page et s'authentifie par les cookies du site (IMDb). `site.auth` est alors absent. |
 
 Règles :
 

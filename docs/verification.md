@@ -80,6 +80,19 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | Comportement après expiration du jeton SensCritique | Non provoqué |
 | Reprise après suspension réelle du service worker | Testée en unitaire uniquement |
 
+## IMDb comme destination, compte de test (2026-11-04)
+
+| Point | Résultat |
+|---|---|
+| Mutation du site relevée lors d'un clic (`UpdateTitleRating` / `rateTitle`) | ✅ |
+| Lecture et écriture depuis la page avec `credentials: 'include'`, sans en-tête propre au site | ✅ |
+| `rating: 11` refusé ; **`rating: 0` supprime la note** | ✅ constaté (note remise ensuite) ; 0 n'est jamais envoyé |
+| Session absente : `FORBIDDEN` « Authentication required » | ✅ traité comme une déconnexion |
+| `mainSearch` et `title(id)` | ✅ fixture réelle |
+| AlloCiné (6 films) → IMDb, vrai adaptateur et vrai moteur d'écriture : 3 créées et vérifiées, 3 identiques ignorées | ✅ contre-vérifié par lecture directe |
+| Mode « à la main » (liste, coches, export IMDb pour écarter les films déjà notés) | 🧪 fixtures ; ⏳ à essayer dans Firefox |
+| Écriture automatique dans l'extension chargée dans Firefox | ⏳ |
+
 ## AlloCiné comme destination, compte de test (2026-11-03)
 
 Code exact de l'adaptateur et du moteur d'écriture, exécuté dans un onglet AlloCiné connecté au compte de test (l'extension n'était pas chargée).
