@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import page1 from '../../adapters/allocine/__fixtures__/movies-seen-page1.json';
 import page2 from '../../adapters/allocine/__fixtures__/movies-seen-page2.json';
 import { parseMoviesRated, type MoviesRatedResponse } from '../../adapters/allocine/parse';
+import imdbRealCsv from '../../adapters/imdb/__fixtures__/ratings.real-fr.csv?raw';
 import imdbCsv from '../../adapters/imdb/__fixtures__/ratings.synthetic.csv?raw';
 import { parseImdbRatings } from '../../adapters/imdb';
 import { allocine } from '../../adapters/allocine';
@@ -13,7 +14,16 @@ import type { AdapterContext } from '../adapter';
 import { buildReport, summarize } from '../export';
 import { parseCsv } from '../files/csv';
 import { silentLogger } from '../log';
-import { applyDestinationExport, completeFileExport, importEntries, newJob, runMatchStep, setRowsSelected } from './pipeline';
+import {
+  applyDestinationExport,
+  completeFileExport,
+  importEntries,
+  newJob,
+  runMatchStep,
+  setManualRowStatus,
+  setRowsSelected,
+  startManual,
+} from './pipeline';
 import { openJobStore, type JobStore } from './store';
 
 const ctx: AdapterContext = {
@@ -63,6 +73,53 @@ describe('IMDb (fichier) → Letterboxd (fichier)', () => {
     const job = (await store.getJob(jobId))!;
     expect(job.phase).toBe('done');
     expect(summarize(job, await store.getRows(jobId))).toMatchObject({ done: 4, failed: 0 });
+  });
+});
+
+describe('AlloCiné → IMDb « à la main »', () => {
+  async function prepareManual() {
+    const job = newJob({ source: 'allocine', destination: 'imdb', dryRun: false, writeMode: 'manual', rounding: 'nearest', conflictPolicy: 'keep', testBatchSize: 3 });
+    await store.putJob(job);
+    await importEntries(store, job, [page1, page2].flatMap((p) => parseMoviesRated(p.data as MoviesRatedResponse, '').items));
+    // ctx lève une erreur à toute requête : le mode manuel ne doit rien envoyer à IMDb.
+    const deps = { store, source: allocine, destination: imdb, sourceCtx: ctx, destinationCtx: ctx };
+    while ((await runMatchStep(job.id, deps)) === 'progressed');
+    return job.id;
+  }
+
+  it('prépare des liens de recherche, sans aucune requête vers IMDb, et tout est coché', async () => {
+    const jobId = await prepareManual();
+    const rows = await store.getRows(jobId);
+    expect(rows.every((r) => r.action === 'create' && r.selected)).toBe(true);
+    expect(rows[0]!.match).toMatchObject({
+      confidence: 'review',
+      confirmedByUser: true,
+      ref: { url: 'https://www.imdb.com/find/?q=Men%20in%20Black%20II%202002&s=tt&ttype=ft' },
+    });
+    expect(rows.map((r) => r.conversion?.value)).toEqual([6, 9, 5, 7, 6, 10]);
+  });
+
+  it('écarte les films déjà notés grâce à l’export IMDb réel', async () => {
+    const jobId = await prepareManual();
+    const { matched } = await applyDestinationExport({ store, destination: imdb }, jobId, parseImdbRatings(imdbRealCsv, ''));
+    expect(matched).toBe(2); // À bout de souffle (7) et Forrest Gump (6), identiques
+    const skipped = (await store.getRows(jobId)).filter((r) => r.action === 'skip_identical').map((r) => r.entry.work.title);
+    expect(skipped).toEqual(['À bout de souffle', 'Forrest Gump']);
+  });
+
+  it('termine quand chaque ligne est cochée « fait » ou « sautée »', async () => {
+    const jobId = await prepareManual();
+    expect(await startManual(store, jobId)).toBe(true);
+    const rows = await store.getRows(jobId);
+    for (const r of rows.slice(0, -1)) await setManualRowStatus(store, jobId, r.rowId, 'done');
+    expect((await store.getJob(jobId))?.phase).toBe('manual');
+    await setManualRowStatus(store, jobId, rows.at(-1)!.rowId, 'skipped');
+    const job = (await store.getJob(jobId))!;
+    expect(job.phase).toBe('done');
+    expect(summarize(job, await store.getRows(jobId))).toMatchObject({ done: 5, skipped: 1, failed: 0 });
+    // On peut encore annuler une coche par erreur : le job repasse en attente.
+    await setManualRowStatus(store, jobId, rows.at(-1)!.rowId, 'pending');
+    expect((await store.getJob(jobId))?.phase).toBe('manual');
   });
 });
 

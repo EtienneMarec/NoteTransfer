@@ -23,6 +23,7 @@ describe('fetchFromPage (exécutée dans la page du site)', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json', Authorization: 'Bearer abc.def' },
       body: '{}',
+      credentials: 'same-origin',
     });
     expect(res).toEqual({ status: 200, headers: { 'content-type': 'application/json' }, body: '{"data":{}}' });
     expect(JSON.stringify(res)).not.toContain('abc');
@@ -33,7 +34,20 @@ describe('fetchFromPage (exécutée dans la page du site)', () => {
     const fetchMock = vi.fn(async () => new Response('', { status: 401 }));
     g.fetch = fetchMock as unknown as typeof fetch;
     await fetchFromPage({ url: 'https://apollo.senscritique.com/', method: 'POST', headers: {}, body: '{}' }, { cookie: 'SC_AUTH', header: 'authorization', prefix: '' });
-    expect(fetchMock).toHaveBeenCalledWith('https://apollo.senscritique.com/', { method: 'POST', headers: {}, body: '{}' });
+    expect(fetchMock).toHaveBeenCalledWith('https://apollo.senscritique.com/', { method: 'POST', headers: {}, body: '{}', credentials: 'same-origin' });
+  });
+
+  it('sans auth, s’appuie sur les cookies du site (IMDb : credentials include)', async () => {
+    g.document = { cookie: 'session-id=1' };
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    g.fetch = fetchMock as unknown as typeof fetch;
+    await fetchFromPage({ url: 'https://api.graphql.imdb.com/', method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, null, 'include');
+    expect(fetchMock).toHaveBeenCalledWith('https://api.graphql.imdb.com/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+      credentials: 'include',
+    });
   });
 
   it('renvoie l’erreur réseau sous forme de valeur', async () => {

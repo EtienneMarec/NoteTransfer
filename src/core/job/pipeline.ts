@@ -21,7 +21,8 @@ export type PipelineOutcome = 'progressed' | 'idle' | 'paused';
 const stamp = (deps: PipelineDeps) => (deps.now ?? (() => new Date()))().toISOString();
 
 export function newJob(
-  init: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'>,
+  init: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'> &
+    Partial<Pick<TransferJob, 'writeMode'>>,
   now = new Date(),
 ): TransferJob {
   return {
@@ -131,6 +132,20 @@ function fileMatch(destination: PlatformAdapter, row: JobRow): RowMatch {
       };
 }
 
+/**
+ * Mode « à la main » : aucune requête vers la destination. Le lien mène à la fiche exacte si l'ID est connu,
+ * sinon à une recherche ; dans ce cas c'est l'utilisateur qui choisira le film sur le site.
+ */
+function manualMatch(destination: PlatformAdapter, row: JobRow): RowMatch {
+  const link = destination.manualWrite!.linkFor(row.entry.work);
+  const ref: PlatformRef = { platform: destination.id, id: link.exact ? link.url : 'recherche', url: link.url };
+  return link.exact
+    ? { confidence: 'sure', ref, reason: 'fiche exacte (identifiant connu)', candidates: [], confirmedByUser: false }
+    : { confidence: 'review', ref, reason: 'à choisir vous-même sur le site, via le lien de recherche', candidates: [], confirmedByUser: true };
+}
+
+export const isManual = (job: TransferJob) => job.writeMode === 'manual';
+
 async function plan(deps: PipelineDeps, job: TransferJob, row: JobRow): Promise<JobRow> {
   const p = planRow({
     row,
@@ -160,6 +175,10 @@ export async function runMatchStep(jobId: string, deps: PipelineDeps): Promise<P
       return 'progressed' as const;
     }
 
+    if (isManual(job)) {
+      await store.putRows([await plan(deps, job, { ...row, match: manualMatch(destination, row), existing: null })]);
+      return 'progressed' as const;
+    }
     if (destination.capabilities.write === 'file') {
       await store.putRows([await plan(deps, job, { ...row, match: fileMatch(destination, row), existing: null })]);
       return 'progressed' as const;
@@ -289,7 +308,9 @@ export async function applyDestinationExport(
 ): Promise<{ matched: number }> {
   const { store, destination } = deps;
   const job = await store.getJob(jobId);
-  if (!job || job.phase !== 'review' || destination.capabilities.write !== 'file') throw new Error('Opération impossible dans cet état');
+  if (!job || job.phase !== 'review' || (destination.capabilities.write !== 'file' && !isManual(job))) {
+    throw new Error('Opération impossible dans cet état');
+  }
   const candidates: Array<Candidate & { rating: PivotEntry['rating'] }> = existingEntries
     .filter((e) => e.rating)
     .map((e) => ({ ref: e.work.refs[0] ?? { platform: destination.id, id: e.work.title }, work: e.work, rating: e.rating }));
@@ -328,6 +349,33 @@ export async function completeFileExport(store: JobStore, jobId: string, fileNam
       .map((r) => ({ ...r, status: 'done' as const, outcome: { at: now.toISOString(), message, verified: false } })),
   );
   await store.putJob({ ...job, phase: 'done', updatedAt: now.toISOString() });
+}
+
+/** Mode « à la main » : passe à la liste à cocher. */
+export async function startManual(store: JobStore, jobId: string): Promise<boolean> {
+  const job = await store.getJob(jobId);
+  if (!job || job.phase !== 'review' || !isManual(job)) return false;
+  await store.putJob({ ...job, phase: 'manual', updatedAt: new Date().toISOString() });
+  return true;
+}
+
+/** Mode « à la main » : l'utilisateur indique qu'il a noté le film (ou qu'il le saute). Termine le job à la dernière ligne. */
+export async function setManualRowStatus(
+  store: JobStore,
+  jobId: string,
+  rowId: string,
+  status: 'done' | 'skipped' | 'pending',
+  now = new Date(),
+): Promise<JobRow> {
+  const job = await store.getJob(jobId);
+  const row = await store.getRow(jobId, rowId);
+  if (!job || !row || !(job.phase === 'manual' || job.phase === 'done') || !isManual(job)) throw new Error('Opération impossible dans cet état');
+  const message = status === 'done' ? 'notée à la main par vous' : status === 'skipped' ? 'sautée par vous' : '';
+  const next: JobRow = status === 'pending' ? { ...row, status, outcome: undefined } : { ...row, status, outcome: { at: now.toISOString(), message } };
+  await store.putRows([next]);
+  const remaining = (await store.getRows(jobId)).filter((r) => r.selected && isWriteAction(r.action) && r.status === 'pending');
+  await store.putJob({ ...job, phase: remaining.length ? 'manual' : 'done', updatedAt: now.toISOString() });
+  return next;
 }
 
 /** Applique une politique de conflit à toutes les lignes en conflit. */

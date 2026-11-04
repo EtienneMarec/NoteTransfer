@@ -62,8 +62,21 @@ export interface SiteConfig {
   homeUrl: string;
   /** Motifs d'URL des onglets utilisables (même origine que homeUrl). */
   tabPatterns: string[];
-  auth: { cookie: string; header: string; prefix: string };
+  /** En-tête construit à partir d'un cookie lisible ; absent si les cookies du site suffisent. */
+  auth?: { cookie: string; header: string; prefix: string };
+  /** `include` quand l'API est sur un autre domaine que la page et s'authentifie par cookies (IMDb). */
+  credentials?: 'same-origin' | 'include';
   loginUrl: string;
+}
+
+/**
+ * Mode « à la main » : l'extension prépare la liste, l'utilisateur note lui-même sur le site.
+ * Aucune requête n'est envoyée à la destination.
+ */
+export interface ManualWrite {
+  /** Lien vers la fiche si l'ID est connu, sinon vers une recherche sur le site. */
+  linkFor(work: PivotWork): { url: string; exact: boolean };
+  instructions: string;
 }
 
 export interface AdapterContext {
@@ -87,6 +100,7 @@ export interface PlatformAdapter {
   /** Origines à demander via permissions.request() avant usage. */
   hostPermissions: readonly string[];
   site?: SiteConfig;
+  manualWrite?: ManualWrite;
 
   checkSession(ctx: AdapterContext): Promise<SessionStatus>;
 
@@ -115,5 +129,5 @@ export function canBeSource(a: PlatformAdapter): boolean {
 }
 
 export function canBeDestination(a: PlatformAdapter): boolean {
-  return a.capabilities.write !== null;
+  return a.capabilities.write !== null || !!a.manualWrite;
 }

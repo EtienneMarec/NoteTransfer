@@ -70,8 +70,7 @@ describe('parseImdbRatings', () => {
     expect(entries).toHaveLength(4);
   });
 
-  it('est une source par fichier uniquement, sans accès réseau', () => {
-    expect(imdb.capabilities).toMatchObject({ read: 'file', write: null });
-    expect(imdb.hostPermissions).toEqual([]);
+  it('se lit par fichier, sans accès réseau pour la lecture', async () => {
+    expect(imdb.capabilities.read).toBe('file');
   });
 });

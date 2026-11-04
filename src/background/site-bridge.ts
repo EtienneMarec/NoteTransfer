@@ -4,21 +4,25 @@ import type { HttpRequest, RawResponse, Transport } from '../core/http/client';
 /**
  * Exécutée dans la page du site (monde MAIN), comme une requête du site lui-même.
  * Le jeton est lu dans le cookie et ajouté à l'en-tête ici : il n'est jamais renvoyé à l'extension.
+ * Sans `auth` (IMDb), ce sont les cookies de session du site qui authentifient (`credentials: 'include'`).
  * Cette fonction est sérialisée par scripting.executeScript : elle ne doit rien capturer de l'extérieur.
  */
 export async function fetchFromPage(
   req: { url: string; method: string; headers: Record<string, string>; body: string | null },
-  auth: { cookie: string; header: string; prefix: string },
+  auth: { cookie: string; header: string; prefix: string } | null,
+  credentials: 'same-origin' | 'include' = 'same-origin',
 ): Promise<{ status: number; headers: Record<string, string>; body: string } | { error: string }> {
   try {
-    const prefix = auth.cookie + '=';
-    const raw = document.cookie
-      .split(';')
-      .map((c) => c.trim())
-      .find((c) => c.startsWith(prefix));
     const headers: Record<string, string> = { ...req.headers };
-    if (raw) headers[auth.header] = auth.prefix + decodeURIComponent(raw.slice(prefix.length));
-    const res = await fetch(req.url, { method: req.method, headers, body: req.body });
+    if (auth) {
+      const prefix = auth.cookie + '=';
+      const raw = document.cookie
+        .split(';')
+        .map((c) => c.trim())
+        .find((c) => c.startsWith(prefix));
+      if (raw) headers[auth.header] = auth.prefix + decodeURIComponent(raw.slice(prefix.length));
+    }
+    const res = await fetch(req.url, { method: req.method, headers, body: req.body, credentials });
     const out: Record<string, string> = {};
     res.headers.forEach((v, k) => {
       out[k] = v;
@@ -84,7 +88,11 @@ export function siteTransport(config: SiteConfig, pool: TabPool): Transport {
       target: { tabId },
       world: 'MAIN',
       func: fetchFromPage,
-      args: [{ url: req.url, method: req.method ?? 'GET', headers: req.headers ?? {}, body: req.body ?? null }, config.auth],
+      args: [
+        { url: req.url, method: req.method ?? 'GET', headers: req.headers ?? {}, body: req.body ?? null },
+        config.auth ?? null,
+        config.credentials ?? 'same-origin',
+      ],
     });
     const value = result?.result as Awaited<ReturnType<typeof fetchFromPage>> | undefined;
     if (!value) throw new Error('Aucune réponse de l’onglet du site');

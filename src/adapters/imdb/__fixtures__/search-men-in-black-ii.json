@@ -1,0 +1,14 @@
+{
+  "_comment": "Réponse réelle de api.graphql.imdb.com (2026-11-04) à mainSearch(searchTerm: \"Men in Black II\", type: TITLE, titleSearchOptions: {type: [MOVIE]}, first: 5). Champ « extensions » (avertissement d'usage) retiré.",
+  "data": {
+    "mainSearch": {
+      "edges": [
+        { "node": { "entity": { "id": "tt0120912", "titleText": { "text": "Men in Black II" }, "originalTitleText": { "text": "Men in Black II" }, "releaseYear": { "year": 2002 }, "runtime": { "seconds": 5280 }, "directors": { "edges": [{ "node": { "name": { "nameText": { "text": "Barry Sonnenfeld" } } } }] } } } },
+        { "node": { "entity": { "id": "tt0119654", "titleText": { "text": "Men in Black" }, "originalTitleText": { "text": "Men in Black" }, "releaseYear": { "year": 1997 }, "runtime": { "seconds": 5880 }, "directors": { "edges": [{ "node": { "name": { "nameText": { "text": "Barry Sonnenfeld" } } } }] } } } },
+        { "node": { "entity": { "id": "tt1409024", "titleText": { "text": "Men in Black 3" }, "originalTitleText": { "text": "Men in Black³" }, "releaseYear": { "year": 2012 }, "runtime": { "seconds": 6360 }, "directors": { "edges": [{ "node": { "name": { "nameText": { "text": "Barry Sonnenfeld" } } } }] } } } },
+        { "node": { "entity": { "id": "tt2283336", "titleText": { "text": "Men in Black: International" }, "originalTitleText": { "text": "Men in Black: International" }, "releaseYear": { "year": 2019 }, "runtime": { "seconds": 6840 }, "directors": { "edges": [{ "node": { "name": { "nameText": { "text": "F. Gary Gray" } } } }] } } } },
+        { "node": { "entity": { "id": "tt0380291", "titleText": { "text": "Men Suddenly in Black" }, "originalTitleText": { "text": "Dai cheung foo" }, "releaseYear": { "year": 2003 }, "runtime": { "seconds": 5880 }, "directors": { "edges": [{ "node": { "name": { "nameText": { "text": "Pang Ho-Cheung" } } } }] } } } }
+      ]
+    }
+  }
+}

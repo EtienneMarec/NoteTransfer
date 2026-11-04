@@ -171,6 +171,6 @@ export async function resume(store: JobStore, jobId: string): Promise<boolean> {
 }
 
 export const cancel = (store: JobStore, jobId: string) =>
-  transition(store, jobId, ['reading', 'matching', 'review', 'running', 'awaiting_confirmation', 'paused'], {
+  transition(store, jobId, ['reading', 'matching', 'review', 'running', 'awaiting_confirmation', 'paused', 'manual'], {
     phase: 'cancelled',
   });

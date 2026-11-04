@@ -10,6 +10,7 @@ export type JobPhase =
   | 'review' // aperçu, corrections et sélection par l'utilisateur
   | 'running' // écriture en cours
   | 'awaiting_confirmation' // lot de test terminé, en attente de « Continuer »
+  | 'manual' // mode « à la main » : l'utilisateur note lui-même et coche chaque ligne
   | 'paused' // erreur persistante, blocage ou demande de l'utilisateur
   | 'done'
   | 'cancelled';
@@ -23,6 +24,8 @@ export interface TransferJob {
   source: PlatformId;
   destination: PlatformId;
   dryRun: boolean;
+  /** `manual` : aucune requête vers la destination, l'utilisateur note lui-même. */
+  writeMode?: 'auto' | 'manual';
   phase: JobPhase;
   readCursor: string | null;
   /** Nombre total annoncé par la source, pour la progression. */

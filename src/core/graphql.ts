@@ -11,7 +11,9 @@ const SIGNED_OUT_CODES = new Set(['UNAUTHENTICATED', 'auth/unauthenticated-user'
 function classify(errors: GraphQLError[], status: number): Error {
   const codes = errors.map((e) => e.extensions?.code);
   const message = errors.map((e) => e.message).filter(Boolean).join(' ; ') || `erreur GraphQL (${status})`;
-  if (codes.some((c) => c && SIGNED_OUT_CODES.has(c)) || status === 401) {
+  // IMDb : code FORBIDDEN avec « Authentication required but not provided ».
+  const authRequired = errors.some((e) => e.extensions?.code === 'FORBIDDEN' && /authentication required/i.test(e.message ?? ''));
+  if (codes.some((c) => c && SIGNED_OUT_CODES.has(c)) || status === 401 || authRequired) {
     return new PauseError('signed_out', 'La session a expiré : reconnectez-vous au site puis reprenez.');
   }
   // Le schéma a changé : continuer produirait des erreurs en série.
