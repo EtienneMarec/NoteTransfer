@@ -25,6 +25,7 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [file, setFile] = useState<{ name: string; entries: PivotEntry[] }>();
+  const [writeMode, setWriteMode] = useState<'auto' | 'manual'>('auto');
 
   useEffect(() => {
     void send({ type: 'getSettings' }).then(setSettings);
@@ -39,13 +40,18 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   const dst = destination ? getAdapter(destination) : undefined;
   const fromFile = src.capabilities.read === 'file';
   const toFile = dst?.capabilities.write === 'file';
-  // Plateforme dont les CGU posent problème (AlloCiné), qu'elle soit source ou destination.
-  const warned = [src, dst].find((a) => a?.capabilities.termsWarning);
+  // Destination qui propose à la fois l'écriture automatique et le mode « à la main » (IMDb).
+  const bothModes = !!dst?.manualWrite && (dst.capabilities.write === 'site' || dst.capabilities.write === 'api');
+  const manual = !!dst?.manualWrite && (writeMode === 'manual' || !dst.capabilities.write);
+  const noSiteWrite = toFile || manual;
+  // Seules les plateformes réellement contactées ont une session à vérifier et un éventuel avertissement.
+  const srcOnline = src.capabilities.read === 'site' || src.capabilities.read === 'api';
+  const dstOnline = !!dst && !noSiteWrite && (dst.capabilities.write === 'site' || dst.capabilities.write === 'api');
+  const online = [srcOnline && src, dstOnline && dst].filter((a): a is NonNullable<typeof dst> => !!a);
+  const warned = online.find((a) => a.capabilities.termsWarning);
   const warning = warned?.capabilities.termsWarning;
   const alreadyAccepted = !!warned && !!settings?.termsAccepted[warned.id];
   const termsOk = !warning || alreadyAccepted || accepted;
-  // Seules les plateformes qui passent par un site ont une session à vérifier.
-  const online = [src, dst].filter((a): a is NonNullable<typeof a> => !!a && a.hostPermissions.length > 0);
   const sessionsOk = online.every((a) => sessions?.[a.id]?.state === 'ok');
   const sourceReady = !fromFile || !!file?.entries.length;
 
@@ -88,7 +94,15 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
       }
       const { jobId } = await send({
         type: 'createJob',
-        job: { source, destination: dst.id, dryRun: !toFile && dryRun, rounding, conflictPolicy: 'keep', testBatchSize },
+        job: {
+          source,
+          destination: dst.id,
+          dryRun: !noSiteWrite && dryRun,
+          writeMode: manual ? 'manual' : 'auto',
+          rounding,
+          conflictPolicy: 'keep',
+          testBatchSize,
+        },
         ...(fromFile && file && { entries: file.entries }),
       });
       onCreated(jobId);
@@ -143,11 +157,40 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
         </>
       )}
 
+      {bothModes && dst && (
+        <>
+          <h3>Écriture sur {dst.displayName}</h3>
+          <div class="grid2" role="radiogroup" aria-label={`Mode d’écriture sur ${dst.displayName}`}>
+            <label class="check">
+              <input type="radio" name="writeMode" checked={writeMode === 'auto'} onChange={() => setWriteMode('auto')} />
+              <span>
+                <strong>Automatique</strong>
+                <br />
+                <span class="muted small">Par l’API interne du site, avec l’avertissement ci-dessous à accepter.</span>
+              </span>
+            </label>
+            <label class="check">
+              <input type="radio" name="writeMode" checked={writeMode === 'manual'} onChange={() => setWriteMode('manual')} />
+              <span>
+                <strong>À la main</strong>
+                <br />
+                <span class="muted small">
+                  L’extension prépare la liste avec les liens et les notes ; vous notez vous-même sur le site. Aucune requête n’est envoyée à{' '}
+                  {dst.displayName}.
+                </span>
+              </span>
+            </label>
+          </div>
+        </>
+      )}
+
       <h3>Options</h3>
       <div class="grid2">
-        {toFile ? (
+        {noSiteWrite ? (
           <p class="muted small">
-            {dst?.displayName} se remplit par son importeur officiel : l’extension génère le fichier, vous l’importez vous-même sur le site.
+            {toFile
+              ? `${dst?.displayName} se remplit par son importeur officiel : l’extension génère le fichier, vous l’importez vous-même sur le site.`
+              : `Vous noterez vous-même sur ${dst?.displayName}, à partir de la liste préparée par l’extension.`}
           </p>
         ) : (
           <>

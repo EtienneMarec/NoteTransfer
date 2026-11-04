@@ -11,8 +11,10 @@ import {
   runReadStep,
   setConflictPolicy,
   setRowMatch,
+  setManualRowStatus,
   setRowSelected,
   setRowsSelected,
+  startManual,
 } from '../core/job/pipeline';
 import { cancel, confirmTestBatch, pauseByUser, resume, runWriteStep, startWriting } from '../core/job/runner';
 import { openJobStore, type JobStore } from '../core/job/store';
@@ -199,9 +201,12 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
       if (driving) throw new Error('Un transfert est déjà en cours');
       const fromFile = getAdapter(req.job.source).capabilities.read === 'file';
       if (fromFile && !req.entries?.length) throw new Error('Aucun film lu dans le fichier');
-      // Une destination par fichier n'écrit rien sur un site : la simulation n'a pas de sens.
-      const toFile = getAdapter(req.job.destination).capabilities.write === 'file';
-      const job = newJob({ ...req.job, dryRun: toFile ? false : req.job.dryRun });
+      // Fichier ou « à la main » : rien n'est écrit sur un site, la simulation n'a pas de sens.
+      const dst = getAdapter(req.job.destination);
+      const manual = req.job.writeMode === 'manual';
+      if (manual && !dst.manualWrite) throw new Error(`${dst.displayName} ne propose pas de mode « à la main »`);
+      const noSiteWrite = manual || dst.capabilities.write === 'file';
+      const job = newJob({ ...req.job, writeMode: manual ? 'manual' : 'auto', dryRun: noSiteWrite ? false : req.job.dryRun });
       await store.putJob(job);
       if (fromFile) await importEntries(store, job, req.entries!);
       log.info(`Nouveau transfert ${job.source} → ${job.destination}${job.dryRun ? ' (simulation)' : ''}`);
@@ -214,6 +219,10 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
     case 'completeFileExport':
       await locked(() => completeFileExport(store, req.jobId, req.fileNames));
       return true;
+    case 'startManual':
+      return locked(() => startManual(store, req.jobId));
+    case 'setManualRowStatus':
+      return locked(() => setManualRowStatus(store, req.jobId, req.rowId, req.status));
     case 'applyDestinationExport': {
       const { destination } = await reviewDeps(req.jobId);
       return locked(() => applyDestinationExport({ store, destination }, req.jobId, req.entries));

@@ -16,13 +16,15 @@ export type Request =
   | { type: 'checkSessions'; platforms: PlatformId[] }
   | {
       type: 'createJob';
-      job: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize'>;
+      job: Pick<TransferJob, 'source' | 'destination' | 'dryRun' | 'rounding' | 'conflictPolicy' | 'testBatchSize' | 'writeMode'>;
       /** Source par fichier : entrées déjà lues dans la page de l'application. */
       entries?: PivotEntry[];
     }
   | { type: 'setRowsSelected'; jobId: string; rowIds: string[]; selected: boolean }
   | { type: 'completeFileExport'; jobId: string; fileNames: string[] }
   | { type: 'applyDestinationExport'; jobId: string; entries: PivotEntry[] }
+  | { type: 'startManual'; jobId: string }
+  | { type: 'setManualRowStatus'; jobId: string; rowId: string; status: 'done' | 'skipped' | 'pending' }
   | { type: 'listJobs' }
   | { type: 'getJob'; jobId: string }
   | { type: 'pause'; jobId: string }
@@ -47,6 +49,8 @@ export interface Responses {
   setRowsSelected: true;
   completeFileExport: true;
   applyDestinationExport: { matched: number };
+  startManual: boolean;
+  setManualRowStatus: JobRow;
   listJobs: TransferJob[];
   getJob: { job: TransferJob; rows: JobRow[]; active: boolean } | null;
   pause: boolean;

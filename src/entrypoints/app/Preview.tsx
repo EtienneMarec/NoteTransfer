@@ -85,7 +85,9 @@ function Line({ job, row: r, editable, act }: { job: TransferJob; row: JobRow; e
   const written = r.status !== 'pending' || r.outcome;
   const dst = getAdapter(job.destination);
   // Destination par fichier : c'est l'importeur du site qui rapproche, rien à corriger ici.
-  const correctable = editable && dst.capabilities.write !== 'file';
+  // Fichier ou « à la main » : pas de candidats à corriger ici.
+  const noCandidates = dst.capabilities.write === 'file' || job.writeMode === 'manual';
+  const correctable = editable && !noCandidates;
 
   return (
     <tr>
@@ -120,8 +122,15 @@ function Line({ job, row: r, editable, act }: { job: TransferJob; row: JobRow; e
         )}
       </td>
       <td>
-        {r.match?.ref && dst.capabilities.write === 'file' ? (
-          <span class="muted small">{r.match.reason}</span>
+        {r.match?.ref && noCandidates ? (
+          <>
+            {r.match.ref.url && job.writeMode === 'manual' && (
+              <a href={r.match.ref.url} target="_blank" rel="noreferrer">
+                {r.match.confidence === 'sure' ? 'fiche' : 'recherche'}
+              </a>
+            )}{' '}
+            <span class="muted small">{r.match.reason}</span>
+          </>
         ) : r.match?.ref ? (
           <>
             <a href={r.match.ref.url} target="_blank" rel="noreferrer">

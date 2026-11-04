@@ -4,6 +4,7 @@ import { send, type Responses } from '../../background/messages';
 import { buildBackup, buildReport, summarize } from '../../core/export';
 import { isWriteAction } from '../../core/job/plan';
 import { download, stampForFile } from './download';
+import { ManualChecklist } from './ManualChecklist';
 import { Preview } from './Preview';
 
 const PHASE_LABELS = {
@@ -12,6 +13,7 @@ const PHASE_LABELS = {
   review: 'Aperçu : à vérifier avant écriture',
   running: 'Écriture en cours',
   awaiting_confirmation: 'Lot de test terminé',
+  manual: 'À noter vous-même',
   paused: 'En pause',
   done: 'Terminé',
   cancelled: 'Annulé',
@@ -47,10 +49,32 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
   const matched = rows.filter((r) => r.match !== undefined).length;
   const finished = toWrite.filter((r) => r.status === 'done' || r.status === 'failed' || r.status === 'skipped').length;
   const summary = summarize(job, rows);
+  const manual = job.writeMode === 'manual';
+  const fileDest = !manual && dst.capabilities.write === 'file';
   const act = (p: Promise<unknown>) => {
     setError(undefined);
     p.then(refresh, (e: Error) => setError(e.message));
   };
+
+  /** Export actuel de la destination, pour retrouver les notes déjà présentes (fichier ou « à la main »). */
+  const existingExport = (why: string) =>
+    dst.parseExport && (
+      <div class={`notice ${job.destinationExportAppliedAt ? 'ok' : 'warn'}`}>
+        <p>
+          <strong>Notes déjà présentes sur {dst.displayName}.</strong> {why} Ajoutez votre export {dst.displayName} actuel pour les retrouver :
+          elles seront conservées, sauf choix contraire. Seules les correspondances sûres sont reconnues, et un film traduit différemment
+          peut échapper à la détection.
+        </p>
+        <p class="muted small">{dst.exportInstructions}</p>
+        <input
+          type="file"
+          accept={dst.exportFileTypes}
+          aria-label={`Export ${dst.displayName} actuel`}
+          onChange={(e) => void applyExport((e.target as HTMLInputElement).files?.[0])}
+        />
+        {exportInfo && <p>{exportInfo}</p>}
+      </div>
+    );
 
   function saveBackup() {
     const b = buildBackup(job, rows);
@@ -149,7 +173,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </div>
         )}
 
-        {(job.phase === 'review' || job.phase === 'awaiting_confirmation' || job.phase === 'done' || job.phase === 'running') && (
+        {(job.phase === 'review' || job.phase === 'awaiting_confirmation' || job.phase === 'done' || job.phase === 'running' || job.phase === 'manual') && (
           <div class="stats">
             <div>
               <strong>{rows.length}</strong>
@@ -174,7 +198,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </div>
         )}
 
-        {job.phase === 'review' && dst.capabilities.write === 'file' && (
+        {job.phase === 'review' && fileDest && (
           <>
             <h3>Fichier d’import {dst.displayName}</h3>
             {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}
@@ -182,23 +206,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
               Les lignes « à vérifier » seront rapprochées par {dst.displayName} sur le titre et l’année : cochez celles que vous voulez inclure
               (filtre « À vérifier », puis « Valider les lignes affichées »).
             </p>
-            {dst.parseExport && (
-              <div class={`notice ${job.destinationExportAppliedAt ? 'ok' : 'warn'}`}>
-                <p>
-                  <strong>Notes déjà présentes sur {dst.displayName}.</strong> Son importeur remplace une note existante sans prévenir. Ajoutez votre
-                  export {dst.displayName} actuel pour les retrouver : elles seront conservées, sauf choix contraire. Seules les correspondances
-                  sûres (titre et année) sont reconnues, et un film traduit différemment peut échapper à la détection.
-                </p>
-                <p class="muted small">{dst.exportInstructions}</p>
-                <input
-                  type="file"
-                  accept={dst.exportFileTypes}
-                  aria-label={`Export ${dst.displayName} actuel`}
-                  onChange={(e) => void applyExport((e.target as HTMLInputElement).files?.[0])}
-                />
-                {exportInfo && <p>{exportInfo}</p>}
-              </div>
-            )}
+            {existingExport(`Son importeur remplace une note existante sans prévenir.`)}
             <div class="row">
               <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
               <button class="primary" disabled={!toWrite.length} onClick={generateImport}>
@@ -208,7 +216,25 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </>
         )}
 
-        {job.phase === 'done' && dst.capabilities.write === 'file' && dst.importInstructions && (
+        {job.phase === 'review' && manual && (
+          <>
+            <h3>Liste à noter vous-même sur {dst.displayName}</h3>
+            <p class="muted small">{dst.manualWrite?.instructions}</p>
+            {existingExport(`Sinon, la liste vous proposera aussi des films que vous avez déjà notés.`)}
+            <div class="row">
+              <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
+              <button class="primary" disabled={!toWrite.length} onClick={() => act(send({ type: 'startManual', jobId }))}>
+                Commencer la liste ({toWrite.length} film(s))
+              </button>
+            </div>
+          </>
+        )}
+
+        {(job.phase === 'manual' || (job.phase === 'done' && manual)) && (
+          <ManualChecklist job={job} rows={toWrite} onChanged={refresh} onError={setError} />
+        )}
+
+        {job.phase === 'done' && fileDest && dst.importInstructions && (
           <div class="notice ok">
             <p>
               <strong>Dernière étape, sur {dst.displayName} :</strong>
@@ -218,7 +244,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </div>
         )}
 
-        {job.phase === 'review' && dst.capabilities.write !== 'file' && (
+        {job.phase === 'review' && !fileDest && !manual && (
           <>
             <h3>Avant d’écrire</h3>
             {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}
@@ -280,7 +306,8 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           </div>
         )}
 
-        {(job.phase === 'done' || job.phase === 'awaiting_confirmation' || job.phase === 'cancelled' || job.phase === 'paused') && rows.length > 0 && (
+        {(job.phase === 'done' || job.phase === 'awaiting_confirmation' || job.phase === 'cancelled' || job.phase === 'paused' || job.phase === 'manual') &&
+          rows.length > 0 && (
           <p>
             <button onClick={saveReport}>Exporter le rapport (JSON + CSV)</button>
           </p>
