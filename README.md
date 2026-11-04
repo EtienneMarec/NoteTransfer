@@ -6,7 +6,7 @@ Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transf�
 - **Aucun mot de passe** n'est demandé ni stocké. Les cookies et jetons de session ne sont ni lus par l'extension, ni exportés, ni journalisés.
 - **Rien d'incertain n'est écrit sans votre accord**, et une note déjà présente n'est jamais écrasée par défaut.
 
-> **État : version 0.1, en développement.** Le parcours AlloCiné → SensCritique est complet et a été testé dans Firefox sur de vrais comptes : simulation complète et une première écriture réelle, vérifiée sur le site. Il n'a pas encore été testé dans Chrome, ni sur un transfert de plusieurs films. Voir [docs/verification.md](docs/verification.md).
+> **État : version 1.0.** Le parcours AlloCiné → SensCritique est complet et a été testé dans Firefox sur de vrais comptes : simulation complète et une première écriture réelle, vérifiée sur le site. Il n'a pas encore été testé dans Chrome, ni sur un transfert de plusieurs films. Voir [docs/verification.md](docs/verification.md).
 
 ## Plateformes
 
@@ -55,6 +55,8 @@ npm run build:firefox
 - **Firefox (140 ou plus récent)** : ouvrez `about:debugging#/runtime/this-firefox`, cliquez sur « Charger un module complémentaire temporaire » et choisissez `dist/firefox-mv3/manifest.json`.
 
 Développement avec rechargement automatique : `npm run dev` (Chrome) ou `npm run dev:firefox`.
+
+Un module temporaire Firefox disparaît à la fermeture du navigateur. Pour une **installation permanente** (signature gratuite par Mozilla, hors boutique) ou une **publication** sur addons.mozilla.org ou le Chrome Web Store, voir [docs/publishing.md](docs/publishing.md).
 
 ## Utilisation
 
