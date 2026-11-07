@@ -1,43 +1,45 @@
 # Notes Transfert
 
-Extension de navigateur open source (Manifest V3, Chrome et Firefox) qui transfère vos notes de films d'une plateforme à une autre, par exemple d'AlloCiné vers SensCritique.
+Open-source browser extension (Manifest V3, Chrome and Firefox) that transfers your movie ratings from one platform to another, for example from AlloCiné to SensCritique.
 
-- **Tout est local** : l'extension utilise les sessions déjà ouvertes dans votre navigateur. Pas de serveur, pas de statistiques d'usage, pas de télémétrie.
-- **Aucun mot de passe** n'est demandé ni stocké. Les cookies et jetons de session ne sont ni lus par l'extension, ni exportés, ni journalisés.
-- **Rien d'incertain n'est écrit sans votre accord**, et une note déjà présente n'est jamais écrasée par défaut.
+- **Everything runs locally**: the extension uses the sessions already open in your browser. No server, no usage statistics, no telemetry.
+- **No password** is ever requested or stored. Session cookies and tokens are never read by the extension, exported or logged.
+- **Nothing uncertain is written without your approval**, and an existing rating is never overwritten by default.
 
-> **État : version 1.0.** Le parcours AlloCiné → SensCritique est complet et a été testé dans Firefox sur de vrais comptes : simulation complète et une première écriture réelle, vérifiée sur le site. Il n'a pas encore été testé dans Chrome, ni sur un transfert de plusieurs films. Voir [docs/verification.md](docs/verification.md).
+> **Status: version 1.0.** The AlloCiné → SensCritique flow is complete and was tested in Firefox on real accounts: a full dry run, then a first real write, verified on the site. IMDb → AlloCiné was also tested in Firefox on test accounts. Not yet tested in Chrome, nor on a real transfer of many films. See [docs/verification.md](docs/verification.md).
+>
+> The extension's interface is in French, so buttons are quoted below in French with an English translation.
 
-## Plateformes
+## Platforms
 
-| Plateforme | Source | Destination | Méthode | État |
+| Platform | Source | Destination | Method | Status |
 |---|---|---|---|---|
-| AlloCiné | ✅ | ✅ | API interne du site, depuis un onglet AlloCiné ; écriture aussi possible « à la main » | Lecture vérifiée sur le vrai site ; recherche et écriture vérifiées sur un compte de test (hors extension chargée) |
-| SensCritique | ✅ | ✅ | API interne du site, depuis un onglet SensCritique | Recherche, note existante et écriture vérifiées sur le vrai site (Firefox) ; la lecture comme source n'a été testée que par requête directe |
-| Letterboxd | ✅ | ✅ | Fichiers officiels : export (ZIP ou `ratings.csv`) en entrée, fichier pour l'importeur en sortie | Export réel lu ; fichier généré importé avec succès sur un compte de test |
-| IMDb | ✅ | ✅ | Lecture : fichier CSV d'export officiel. Écriture : API interne du site (avertissement) **ou** « à la main » | Export réel lu ; écriture automatique vérifiée sur un compte de test (hors extension chargée) ; mode à la main testé sur fixtures |
+| AlloCiné | ✅ | ✅ | The site's internal API, from an AlloCiné tab; writing can also be done manually | Reading verified on the real site; search and writing verified on a test account (outside the loaded extension) |
+| SensCritique | ✅ | ✅ | The site's internal API, from a SensCritique tab | Search, existing rating and writing verified on the real site (Firefox); reading as a source only tested by direct request |
+| Letterboxd | ✅ | ✅ | Official files: the export (ZIP or `ratings.csv`) as input, a file for the official importer as output | Real export read; generated file successfully imported on a test account |
+| IMDb | ✅ | ✅ | Reading: the official CSV export. Writing: the site's internal API (with a warning) **or** manually | Real export read; automatic writing verified on a test account (outside the loaded extension); manual mode tested on fixtures |
 
-Trakt et TMDB ont été étudiés ([docs/platforms/](docs/platforms/)) mais sont hors périmètre pour l'instant.
+Trakt and TMDB were studied ([docs/platforms/](docs/platforms/)) but are out of scope for now.
 
-Le détail de chaque plateforme (méthodes, authentification, pagination, échelle, limites, points fragiles et CGU) est dans [docs/platforms/](docs/platforms/).
+Details for each platform (methods, authentication, pagination, rating scale, limits, fragile points and terms of use) are in [docs/platforms/](docs/platforms/) (in French).
 
-### Limites à connaître
+### Limitations
 
-- **AlloCiné** : ses CGU interdisent l'extraction automatisée de données (art. 7.5 et 8.1), et le site peut suspendre un compte sans préavis (art. 9). L'extension affiche cet avertissement et attend votre accord avant le premier usage. Comme destination, AlloCiné peut aussi être rempli **à la main** : l'extension prépare la liste (note et lien de recherche), vous notez vous-même, sans aucune requête vers AlloCiné. AlloCiné ne fournit pas de date de notation.
-- **SensCritique** : noter un film le marque comme vu et le retire de vos envies.
-- **Letterboxd** : l'extension génère le fichier, et c'est vous qui l'importez sur letterboxd.com/import. Letterboxd fait lui-même le rapprochement des films : par identifiant IMDb quand la source en fournit (export IMDb), sinon par titre, année et réalisateur. Ces lignes doivent donc être validées dans l'aperçu, puis vérifiées dans le récapitulatif de Letterboxd. **L'importeur remplace sans prévenir une note déjà présente**, et un import ne peut pas être annulé : ajoutez votre export Letterboxd actuel dans l'aperçu pour que l'extension retrouve et conserve ces notes. L'importeur est normalement réservé aux membres Pro, et limité à 1 900 titres par fichier.
-- **IMDb** : la lecture se fait à partir de son fichier d'export. Pour écrire, IMDb n'offre ni import ni API publique, donc deux modes :
-  - **automatique**, par l'API interne du site, après un avertissement : ses conditions interdisent les robots, et le compte IMDb est souvent un compte Amazon ;
-  - **à la main** : l'extension prépare la liste (note et lien vers la fiche ou une recherche), vous notez vous-même et cochez chaque film, sans aucune requête vers IMDb.
+- **AlloCiné**: its terms of use forbid automated data extraction (articles 7.5 and 8.1), and the site may suspend an account without notice (article 9). The extension shows this warning and waits for your consent before first use. As a destination, AlloCiné can also be filled in **manually**: the extension prepares the list (rating and search link) and you rate the films yourself, with no request sent to AlloCiné. AlloCiné does not provide rating dates.
+- **SensCritique**: rating a film marks it as watched and removes it from your watchlist.
+- **Letterboxd**: the extension generates the file, and you import it yourself at letterboxd.com/import. Letterboxd matches the films itself: by IMDb ID when the source provides one (IMDb export), otherwise by title, year and director. Those rows must therefore be validated in the preview, then checked in Letterboxd's import summary. **The importer silently replaces an existing rating**, and an import cannot be undone: add your current Letterboxd export in the preview so the extension can find those ratings and keep them. The importer is normally reserved for Pro members, and limited to 1,900 titles per file.
+- **IMDb**: reading uses its export file. For writing, IMDb offers neither an import nor a public API, hence two modes:
+  - **automatic**, through the site's internal API, after a warning: IMDb's conditions of use forbid robots, and an IMDb account is often an Amazon account;
+  - **manual**: the extension prepares the list (rating, and a link to the title page or to a search), you rate each film yourself and tick it off, with no request sent to IMDb.
 
-  Une note IMDb à 0 supprimerait la note : l'extension n'envoie que des notes de 1 à 10.
-- **Fichiers** : ils sont lus dans le navigateur et ne sont envoyés nulle part.
-- AlloCiné et SensCritique n'utilisent pas d'API publique : un changement de leur site peut casser l'adaptateur. L'extension se met alors en pause avec le message « adaptateur obsolète » au lieu de continuer.
-- Si un site affiche un CAPTCHA ou une vérification anti-robot, le transfert se met en pause et vous prévient. L'extension ne contourne jamais ces protections.
+  An IMDb rating of 0 would delete the rating: the extension only sends ratings from 1 to 10.
+- **Files** are read in the browser and never sent anywhere.
+- AlloCiné, SensCritique and IMDb writing rely on undocumented internal APIs: a change on the site can break the adapter. The extension then pauses with an "adapter outdated" message (« adaptateur obsolète ») instead of continuing.
+- If a site shows a CAPTCHA or an anti-bot check, the transfer pauses and lets you know. The extension never bypasses these protections.
 
-## Installation (mode développeur)
+## Installation (developer mode)
 
-Prérequis : Node.js 20 ou plus récent.
+Requirement: Node.js 20 or later.
 
 ```bash
 npm install
@@ -51,38 +53,40 @@ npm run build
 npm run build:firefox
 ```
 
-- **Chrome / Edge** : ouvrez `chrome://extensions`, activez le « Mode développeur », cliquez sur « Charger l'extension non empaquetée » et choisissez `dist/chrome-mv3`.
-- **Firefox (140 ou plus récent)** : ouvrez `about:debugging#/runtime/this-firefox`, cliquez sur « Charger un module complémentaire temporaire » et choisissez `dist/firefox-mv3/manifest.json`.
+- **Chrome / Edge**: open `chrome://extensions`, turn on "Developer mode", click "Load unpacked" and choose `dist/chrome-mv3`.
+- **Firefox (140 or later)**: open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on…" and choose `dist/firefox-mv3/manifest.json`.
 
-Développement avec rechargement automatique : `npm run dev` (Chrome) ou `npm run dev:firefox`.
+Development with live reload: `npm run dev` (Chrome) or `npm run dev:firefox`.
 
-Un module temporaire Firefox disparaît à la fermeture du navigateur. Pour une **installation permanente** (signature gratuite par Mozilla, hors boutique) ou une **publication** sur addons.mozilla.org ou le Chrome Web Store, voir [docs/publishing.md](docs/publishing.md).
+A temporary Firefox add-on is removed when the browser closes. For a **permanent installation** (free signing by Mozilla, without a public listing) or **publication** on addons.mozilla.org or the Chrome Web Store, see [docs/publishing.md](docs/publishing.md) (in French).
 
-## Utilisation
+## Usage
 
-1. Connectez-vous normalement à AlloCiné et à SensCritique dans ce navigateur.
-2. Cliquez sur l'icône de l'extension : l'application s'ouvre dans un onglet.
-3. Choisissez la source et la destination. Le **mode simulation** est activé par défaut.
-4. Cliquez sur « Autoriser l'accès et vérifier les sessions ». Le navigateur demande l'accès aux deux sites, et seulement à eux.
-5. Lisez et acceptez l'avertissement AlloCiné, puis lancez la lecture. Les requêtes partent une à une, espacées de 2 à 4 s (réglable).
-6. Dans l'**aperçu**, vérifiez chaque ligne : film, note source, note convertie, note existante, confiance et action prévue.
-   - Les lignes « à vérifier » sont décochées : cochez-les pour valider, ou corrigez la correspondance (liste de candidats ou adresse de fiche collée).
-   - Les conflits sont conservés par défaut : cochez une ligne pour l'écraser, ou changez la règle globale.
-7. Téléchargez la **sauvegarde** (JSON + CSV). Elle est obligatoire avant une écriture réelle.
-8. Lancez le **lot de test** (3 films par défaut), vérifiez le résultat, puis cliquez sur « Continuer ».
-9. Exportez le **rapport** final (JSON + CSV) : réussites, ignorés, échecs et raisons.
+1. Sign in to the platforms as usual in this browser (for example AlloCiné and SensCritique).
+2. Click the extension icon: the app opens in a tab.
+3. Choose the source and the destination. **Dry-run mode** (« Mode simulation ») is on by default.
+4. Click « Autoriser l'accès et vérifier les sessions » (allow access and check sessions). The browser asks for access to those sites, and only those.
+5. Read and accept the AlloCiné warning, then start reading. Requests are sent one at a time, 2 to 4 seconds apart (configurable).
+6. In the **preview**, check each row: film, source rating, converted rating, existing rating, confidence and planned action.
+   - Rows « à vérifier » (to check) are unticked: tick them to approve, or fix the match (list of candidates, or a pasted title-page URL).
+   - Conflicts are kept by default: tick a row to overwrite it, or change the global rule.
+7. Download the **backup** (JSON + CSV). It is required before any real write.
+8. Run the **test batch** (3 films by default), check the result, then click « Continuer » (continue).
+9. Export the final **report** (JSON + CSV): successes, skipped, failures and reasons.
 
-**Avec un fichier** (IMDb ou Letterboxd en source) : à l'étape 3, choisissez le fichier d'export indiqué ; il n'y a pas de session à vérifier pour cette plateforme. **Vers Letterboxd** : à la place des étapes 7 et 8, cliquez sur « Générer le fichier d'import », puis suivez les instructions affichées pour l'importer sur le site.
+**From a file** (IMDb or Letterboxd as source): at step 3, choose the indicated export file; there is no session to check for that platform.
+**To Letterboxd**: instead of steps 7 and 8, click « Générer le fichier d'import » (generate the import file), then follow the on-screen instructions to import it on the site.
+**Manual mode** (AlloCiné or IMDb as destination, option « À la main »): the extension sends nothing to the destination; after the preview, click « Commencer la liste » (start the list), open each link, rate the film yourself, then mark it « Fait » (done) or « Sauter » (skip).
 
-Vous pouvez mettre en pause et reprendre à tout moment. Après une fermeture du navigateur, le transfert est mis en pause : cliquez sur « Reprendre ». Chaque ligne en cours est revérifiée sur le site avant toute nouvelle tentative, ce qui évite les doublons.
+You can pause and resume at any time. After the browser is closed, the transfer is paused: click « Reprendre » (resume). Every row that was in progress is checked again on the site before any new attempt, which prevents duplicates.
 
-**Tout supprimer** (en haut de l'application) efface les transferts, les correspondances mémorisées et les réglages, puis retire les autorisations d'accès aux sites.
+**« Tout supprimer »** (delete everything, at the top of the app) erases transfers, remembered matches and settings, then removes the extension's access to the sites.
 
-## Conversion des notes
+## Rating conversion
 
-La note d'origine et son échelle sont conservées. La conversion est proportionnelle (3,5/5 → 7/10), puis alignée sur le pas de la destination. Entre AlloCiné (0,5 à 5) et SensCritique (1 à 10), elle est toujours exacte. Il en va de même entre Letterboxd (0,5 à 5) et IMDb (1 à 10). Si une future plateforme rend une conversion inexacte, l'aperçu affichera l'ancienne note, la nouvelle et la règle d'arrondi choisie.
+The original rating and its scale are kept. The conversion is proportional (3.5/5 → 7/10), then aligned to the destination's step. Between AlloCiné (0.5 to 5) and SensCritique (1 to 10), it is always exact. The same goes for Letterboxd (0.5 to 5) and IMDb (1 to 10). If a future platform makes a conversion inexact, the preview will show the old rating, the new one and the chosen rounding rule.
 
-## Développement
+## Development
 
 ```bash
 npm test
@@ -92,10 +96,12 @@ npm test
 npm run typecheck
 ```
 
-- Architecture, modèle pivot et interface des adaptateurs : [docs/plan.md](docs/plan.md)
-- Ajouter une plateforme : [docs/adding-a-platform.md](docs/adding-a-platform.md)
-- Ce qui a été vérifié sur les vrais sites, et ce qui ne l'a été qu'avec des fixtures : [docs/verification.md](docs/verification.md)
+Design notes are in French:
 
-## Licence
+- Architecture, pivot model and adapter interface: [docs/plan.md](docs/plan.md)
+- Adding a platform: [docs/adding-a-platform.md](docs/adding-a-platform.md)
+- What was verified on the real sites, and what was only tested with fixtures: [docs/verification.md](docs/verification.md)
+
+## License
 
 MIT.
