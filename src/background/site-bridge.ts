@@ -1,3 +1,4 @@
+import { LocalizedError, msg, raw } from '../core/i18n';
 import type { SiteConfig } from '../core/adapter';
 import type { HttpRequest, RawResponse, Transport } from '../core/http/client';
 
@@ -46,7 +47,7 @@ export class TabPool {
     if (ready?.id !== undefined) return ready.id;
 
     const tab = await browser.tabs.create({ url: config.homeUrl, active: false });
-    if (tab.id === undefined) throw new Error('Impossible d’ouvrir un onglet');
+    if (tab.id === undefined) throw new LocalizedError(msg('err.tabOpen'));
     this.created.add(tab.id);
     await waitComplete(tab.id);
     return tab.id;
@@ -67,7 +68,7 @@ function waitComplete(tabId: number, timeoutMs = 45_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       browser.tabs.onUpdated.removeListener(listener);
-      reject(new Error('Le site met trop de temps à charger'));
+      reject(new LocalizedError(msg('err.tabTimeout')));
     }, timeoutMs);
     const listener = (id: number, info: { status?: string }) => {
       if (id === tabId && info.status === 'complete') {
@@ -95,8 +96,8 @@ export function siteTransport(config: SiteConfig, pool: TabPool): Transport {
       ],
     });
     const value = result?.result as Awaited<ReturnType<typeof fetchFromPage>> | undefined;
-    if (!value) throw new Error('Aucune réponse de l’onglet du site');
-    if ('error' in value) throw new Error(value.error);
+    if (!value) throw new LocalizedError(msg('err.tabNoResponse'));
+    if ('error' in value) throw new LocalizedError(raw(value.error));
     return value;
   };
 }

@@ -1,5 +1,6 @@
 import type { AdapterContext, PlatformAdapter } from '../adapter';
 import { isAbortError, PauseError } from '../errors';
+import { errorMsg, msg, type Msg } from '../i18n';
 import { isWriteAction } from './plan';
 import type { JobStore } from './store';
 import type { JobRow, TransferJob } from './types';
@@ -44,18 +45,18 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
     return 'awaiting_confirmation';
   }
 
-  const finish = (status: JobRow['status'], message: string, extra: Partial<NonNullable<JobRow['outcome']>> = {}) =>
+  const finish = (status: JobRow['status'], message: Msg, extra: Partial<NonNullable<JobRow['outcome']>> = {}) =>
     store.putRows([{ ...row, status, outcome: { at: now(), message, ...extra } }]);
 
   if (job.dryRun) {
-    await finish('done', 'simulation : aucune écriture', { simulated: true });
+    await finish('done', msg('outcome.simulated'), { simulated: true });
     return 'progressed';
   }
 
   const ref = row.match?.ref;
   const target = row.conversion?.value;
   if (!ref || target === undefined || !destination.writeRating) {
-    await finish('failed', 'ligne incomplète (correspondance ou note manquante)');
+    await finish('failed', msg('outcome.incomplete'));
     return 'progressed';
   }
 
@@ -65,12 +66,12 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
     const resumed = row.status === 'in_flight';
 
     if (current?.value === target) {
-      await finish('done', resumed ? 'déjà enregistrée (vérifiée à la reprise)' : 'déjà présente', { verified: true });
+      await finish('done', msg(resumed ? 'outcome.verifiedOnResume' : 'outcome.alreadyPresent'), { verified: true });
       return 'progressed';
     }
     // La destination a changé depuis l'aperçu : on ne prend pas de décision à la place de l'utilisateur.
     if (!resumed && current !== undefined && (current?.value ?? null) !== (row.existing?.value ?? null)) {
-      await finish('skipped', "la note de destination a changé depuis l'aperçu ; elle est conservée");
+      await finish('skipped', msg('outcome.changedSincePreview'));
       return 'progressed';
     }
 
@@ -85,7 +86,7 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
     }
 
     if (!destination.getExistingRating) {
-      await store.putRows([{ ...inFlight, status: 'done', outcome: { at: now(), message: 'enregistrée', verified: false } }]);
+      await store.putRows([{ ...inFlight, status: 'done', outcome: { at: now(), message: msg('outcome.saved'), verified: false } }]);
       return 'progressed';
     }
     const after = await destination.getExistingRating(ctx, ref);
@@ -96,7 +97,7 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
         status: verified ? 'done' : 'failed',
         outcome: {
           at: now(),
-          message: verified ? 'enregistrée et vérifiée' : `non confirmée : la destination indique ${after?.value ?? 'aucune note'}`,
+          message: verified ? msg('outcome.savedVerified') : msg('outcome.notConfirmed', { value: after?.value ?? msg('outcome.noRating') }),
           verified,
         },
       },
@@ -110,13 +111,13 @@ export async function runWriteStep(jobId: string, deps: RunnerDeps): Promise<Ste
       return 'paused';
     }
     const latest = (await store.getRow(jobId, row.rowId)) ?? row;
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorMsg(e);
     // L'erreur a pu survenir après que le site a enregistré la note : on vérifie avant de conclure.
     if (sent && destination.getExistingRating) {
       const after = await destination.getExistingRating(ctx, ref).catch(() => undefined);
       if (after?.value === target) {
         await store.putRows([
-          { ...latest, status: 'done', outcome: { at: now(), message: `enregistrée malgré l'erreur « ${message} »`, verified: true } },
+          { ...latest, status: 'done', outcome: { at: now(), message: msg('outcome.savedDespiteError', { error: message }), verified: true } },
         ]);
         return 'progressed';
       }
@@ -135,7 +136,7 @@ export async function runUntilStopped(jobId: string, deps: RunnerDeps): Promise<
 }
 
 export function pauseInfo(e: PauseError, at: string, resumePhase: NonNullable<TransferJob['pause']>['resumePhase']) {
-  return { kind: e.kind, message: e.message, at, resumePhase, ...(e.detail?.url && { url: e.detail.url }) };
+  return { kind: e.kind, message: e.msg, at, resumePhase, ...(e.detail?.url && { url: e.detail.url }) };
 }
 
 async function transition(store: JobStore, jobId: string, from: TransferJob['phase'][], patch: Partial<TransferJob>) {
@@ -160,7 +161,7 @@ export async function pauseByUser(store: JobStore, jobId: string): Promise<boole
   if (!job || !(job.phase === 'reading' || job.phase === 'matching' || job.phase === 'running')) return false;
   return transition(store, jobId, [job.phase], {
     phase: 'paused',
-    pause: { kind: 'user', message: 'Mis en pause par vous.', at: new Date().toISOString(), resumePhase: job.phase },
+    pause: { kind: 'user', message: msg('pause.byUser'), at: new Date().toISOString(), resumePhase: job.phase },
   });
 }
 

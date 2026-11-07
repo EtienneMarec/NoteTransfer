@@ -1,3 +1,4 @@
+import { msg, type Msg } from '../i18n';
 import type { Candidate, WorkQuery } from '../adapter';
 import type { ExternalIds, PivotWork } from '../pivot';
 import { normalizeName, titleSimilarity } from './normalize';
@@ -23,7 +24,7 @@ export interface MatchDecision {
   best?: ScoredCandidate;
   /** Tous les candidats retenus, du meilleur au moins bon (pour la correction manuelle). */
   ranked: ScoredCandidate[];
-  reason: string;
+  reason: Msg;
 }
 
 export const WEIGHTS = { title: 0.45, year: 0.25, director: 0.2, runtime: 0.1 } as const;
@@ -118,16 +119,16 @@ export function decideMatch(q: WorkQuery, candidates: Candidate[]): MatchDecisio
 
   const [best, second] = ranked;
   if (!best || best.score < THRESHOLDS.review) {
-    return { confidence: 'not_found', ranked, reason: ranked.length ? 'aucun candidat assez proche' : 'aucun candidat' };
+    return { confidence: 'not_found', ranked, reason: msg(ranked.length ? 'match.noCloseCandidate' : 'match.noCandidate') };
   }
   if (best.signals.externalId === 'match') {
-    return { confidence: 'sure', best, ranked, reason: 'identifiant externe identique' };
+    return { confidence: 'sure', best, ranked, reason: msg('match.externalId') };
   }
   if (second && best.score - second.score < THRESHOLDS.ambiguityGap) {
-    return { confidence: 'review', best, ranked, reason: 'plusieurs candidats proches' };
+    return { confidence: 'review', best, ranked, reason: msg('match.multipleClose') };
   }
   if (best.score >= THRESHOLDS.sure) {
-    return { confidence: 'sure', best, ranked, reason: 'titre, année et indices concordants' };
+    return { confidence: 'sure', best, ranked, reason: msg('match.sure') };
   }
-  return { confidence: 'review', best, ranked, reason: 'correspondance partielle' };
+  return { confidence: 'review', best, ranked, reason: msg('match.partial') };
 }

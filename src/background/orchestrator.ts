@@ -1,3 +1,4 @@
+import { errorMsg, LocalizedError, msg } from '../core/i18n';
 import { getAdapter } from '../adapters/registry';
 import type { AdapterContext, PlatformAdapter, SessionStatus } from '../core/adapter';
 import { isAbortError, PauseError } from '../core/errors';
@@ -131,7 +132,7 @@ async function drive(jobId: string): Promise<void> {
           updatedAt: new Date().toISOString(),
           pause: {
             kind: 'network',
-            message: e instanceof Error ? e.message : String(e),
+            message: errorMsg(e),
             at: new Date().toISOString(),
             resumePhase: job.phase as 'reading' | 'matching' | 'running',
           },
@@ -163,7 +164,7 @@ export async function pauseAfterBrowserRestart(): Promise<void> {
       updatedAt: new Date().toISOString(),
       pause: {
         kind: 'user',
-        message: 'Interrompu par la fermeture du navigateur. Cliquez sur Reprendre pour continuer.',
+        message: msg('pause.browserRestart'),
         at: new Date().toISOString(),
         resumePhase: job.phase as 'reading' | 'matching' | 'running',
       },
@@ -178,7 +179,7 @@ export function onAlarm(name: string) {
 async function reviewDeps(jobId: string) {
   const store = await getStore();
   const job = await store.getJob(jobId);
-  if (!job) throw new Error('Transfert introuvable');
+  if (!job) throw new LocalizedError(msg('err.jobNotFound'));
   const destination = getAdapter(job.destination);
   return { store, job, destination, destinationCtx: await contextFor(destination, new AbortController().signal) };
 }
@@ -193,13 +194,13 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
       return out;
     }
     case 'createJob': {
-      if (driving) throw new Error('Un transfert est déjà en cours');
+      if (driving) throw new LocalizedError(msg('err.jobRunning'));
       const fromFile = getAdapter(req.job.source).capabilities.read === 'file';
-      if (fromFile && !req.entries?.length) throw new Error('Aucun film lu dans le fichier');
+      if (fromFile && !req.entries?.length) throw new LocalizedError(msg('err.noFilmsInFile'));
       // Fichier ou « à la main » : rien n'est écrit sur un site, la simulation n'a pas de sens.
       const dst = getAdapter(req.job.destination);
       const manual = req.job.writeMode === 'manual';
-      if (manual && !dst.manualWrite) throw new Error(`${dst.displayName} ne propose pas de mode « à la main »`);
+      if (manual && !dst.manualWrite) throw new LocalizedError(msg('err.noManualMode', { platform: dst.displayName }));
       const noSiteWrite = manual || dst.capabilities.write === 'file';
       const job = newJob({ ...req.job, writeMode: manual ? 'manual' : 'auto', dryRun: noSiteWrite ? false : req.job.dryRun });
       await store.putJob(job);
@@ -249,15 +250,15 @@ export async function handle(req: Request): Promise<Responses[Request['type']]> 
       const deps = await reviewDeps(req.jobId);
       const row = await store.getRow(req.jobId, req.rowId);
       const candidate = req.candidateId === null ? null : row?.match?.candidates.find((c) => c.candidate.ref.id === req.candidateId)?.candidate;
-      if (candidate === undefined) throw new Error('Candidat inconnu');
+      if (candidate === undefined) throw new LocalizedError(msg('err.unknownCandidate'));
       return locked(() => setRowMatch(req.jobId, req.rowId, candidate, deps));
     }
     case 'setRowUrl': {
       const deps = await reviewDeps(req.jobId);
       const ref = deps.destination.parseUrl?.(req.url);
-      if (!ref) throw new Error(`Adresse non reconnue pour ${deps.destination.displayName}`);
+      if (!ref) throw new LocalizedError(msg('err.urlNotRecognized', { platform: deps.destination.displayName }));
       const candidate = await deps.destination.getFilm?.(deps.destinationCtx, ref);
-      if (!candidate) throw new Error('Film introuvable à cette adresse');
+      if (!candidate) throw new LocalizedError(msg('err.filmNotFoundAtUrl'));
       const row = await locked(() => setRowMatch(req.jobId, req.rowId, candidate, deps));
       await tabs.closeCreated();
       return row;

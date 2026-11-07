@@ -1,3 +1,4 @@
+import { LocalizedError, msg, type Lang, type Msg } from '../core/i18n';
 import type { SessionStatus } from '../core/adapter';
 import type { JobRow, TransferJob } from '../core/job/types';
 import type { PivotEntry, PlatformId } from '../core/pivot';
@@ -5,6 +6,8 @@ import type { PivotEntry, PlatformId } from '../core/pivot';
 export interface Settings {
   minDelayMs: number;
   maxDelayMs: number;
+  /** Langue de l'interface ; absente = langue du navigateur. */
+  language?: Lang;
   /** Date d'acceptation de l'avertissement CGU, par plateforme. */
   termsAccepted: Partial<Record<PlatformId, string>>;
 }
@@ -67,11 +70,11 @@ export interface Responses {
   deleteAll: true;
 }
 
-export type Reply<T extends Request['type']> = { ok: true; value: Responses[T] } | { ok: false; error: string };
+export type Reply<T extends Request['type']> = { ok: true; value: Responses[T] } | { ok: false; error: Msg };
 
 export async function send<R extends Request>(request: R): Promise<Responses[R['type']]> {
   const reply = (await browser.runtime.sendMessage(request)) as Reply<R['type']> | undefined;
-  if (!reply) throw new Error('Le service de l’extension ne répond pas');
-  if (!reply.ok) throw new Error(reply.error);
+  if (!reply) throw new LocalizedError(msg('err.noBackground'));
+  if (!reply.ok) throw new LocalizedError(reply.error);
   return reply.value;
 }

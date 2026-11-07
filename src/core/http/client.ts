@@ -1,4 +1,5 @@
 import { HttpError, PauseError } from '../errors';
+import { msg, render, type Msg } from '../i18n';
 import { silentLogger, type Logger } from '../log';
 import { detectBlock, type RawResponse } from './block';
 
@@ -107,12 +108,12 @@ export function createHttpClient({
       }
 
       let res: RawResponse | undefined;
-      let failure: string;
+      let failure: Msg;
       try {
         res = await transport(req, signal);
       } catch (e) {
         if (signal.aborted) throw e;
-        failure = `erreur réseau (${e instanceof Error ? e.message : String(e)})`;
+        failure = msg('err.networkDetail', { detail: e instanceof Error ? e.message : String(e) });
       } finally {
         lastEnd.set(host, clock.now());
       }
@@ -120,23 +121,23 @@ export function createHttpClient({
       if (res) {
         const block = detectBlock(res, req.expectJson ?? true);
         if (block) {
-          throw new PauseError('blocked', `${host} affiche une vérification (${block}).`, { reason: block, url: req.url });
+          throw new PauseError('blocked', msg('err.blocked', { host, reason: block }), { reason: block, url: req.url });
         }
         if (!RETRYABLE_STATUS.has(res.status)) {
-          if (res.status >= 400) throw new HttpError(res.status, `${host} a répondu ${res.status}`, res.body);
+          if (res.status >= 400) throw new HttpError(res.status, msg('err.http', { host, status: res.status }), res.body);
           return res;
         }
-        failure = `statut ${res.status}`;
+        failure = msg('err.statusDetail', { status: res.status });
       }
 
       if (n >= policy.maxAttempts) {
         const kind = res?.status === 429 ? 'rate_limited' : 'network';
-        throw new PauseError(kind, `${host} : ${failure!} après ${n} tentatives.`, { url: req.url });
+        throw new PauseError(kind, msg('err.retriesExhausted', { host, detail: failure!, attempts: n }), { url: req.url });
       }
       const backoff = Math.min(policy.backoffMaxMs, policy.backoffBaseMs * 2 ** (n - 1));
       const jittered = backoff * (0.75 + clock.random() * 0.5);
       const delay = Math.max(jittered, (res && retryAfterMs(res, clock.now())) ?? 0);
-      log.warn(`${host} : ${failure!}, nouvelle tentative dans ${Math.round(delay / 1000)} s`, { attempt: n });
+      log.warn(`${host} : ${render(failure!, 'fr')}, nouvelle tentative dans ${Math.round(delay / 1000)} s`, { attempt: n });
       await clock.sleep(delay, signal);
     }
   }

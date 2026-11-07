@@ -1,5 +1,6 @@
 import type { ExternalIds, PivotEntry, PivotRating, PivotWork, PlatformId, PlatformRef, RatingScale, WorkKind } from './pivot';
 import type { HttpClient } from './http/client';
+import type { Localized, Msg } from './i18n';
 import type { Logger } from './log';
 
 export type ReadMethod = 'api' | 'site' | 'file';
@@ -16,10 +17,10 @@ export interface Capabilities {
   lookupByExternalId: (keyof ExternalIds)[];
   requiresUserCredentials?: 'apiKey' | 'oauth';
   /** Avertissement à accepter avant la première utilisation (ex. CGU AlloCiné). */
-  termsWarning?: string;
+  termsWarning?: Localized;
   /** Effets de bord d'une écriture, affichés dans l'aperçu. */
-  writeSideEffects?: string;
-  notes?: string;
+  writeSideEffects?: Localized;
+  notes?: Localized;
 }
 
 export type SessionStatus =
@@ -50,7 +51,7 @@ export interface Candidate {
   work: PivotWork;
 }
 
-export type WriteResult = { ok: true } | { ok: false; retryable: boolean; reason: string };
+export type WriteResult = { ok: true } | { ok: false; retryable: boolean; reason: Msg };
 
 /**
  * Pour les adaptateurs `site` : les requêtes sont exécutées depuis un onglet du site,
@@ -76,7 +77,7 @@ export interface SiteConfig {
 export interface ManualWrite {
   /** Lien vers la fiche si l'ID est connu, sinon vers une recherche sur le site. */
   linkFor(work: PivotWork): { url: string; exact: boolean };
-  instructions: string;
+  instructions: Localized;
 }
 
 export interface AdapterContext {
@@ -110,7 +111,7 @@ export interface PlatformAdapter {
   parseExport?(file: { name: string; bytes: Uint8Array }): Promise<PivotEntry[]>;
   /** Fichiers acceptés par le sélecteur (attribut `accept`). */
   exportFileTypes?: string;
-  exportInstructions?: string;
+  exportInstructions?: Localized;
 
   searchFilm?(ctx: AdapterContext, query: WorkQuery): Promise<Candidate[]>;
   /** Reconnaît une URL de fiche collée par l'utilisateur pour corriger une correspondance. */
@@ -121,7 +122,7 @@ export interface PlatformAdapter {
   writeRating?(ctx: AdapterContext, ref: PlatformRef, value: number): Promise<WriteResult>;
 
   buildImportFiles?(rows: Array<{ work: PivotWork; value: number }>): ImportFile[];
-  importInstructions?: string;
+  importInstructions?: Localized;
 }
 
 export function canBeSource(a: PlatformAdapter): boolean {

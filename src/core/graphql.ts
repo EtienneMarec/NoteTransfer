@@ -1,5 +1,6 @@
 import type { AdapterContext } from './adapter';
 import { HttpError, PauseError } from './errors';
+import { LocalizedError, msg, raw } from './i18n';
 
 interface GraphQLError {
   message?: string;
@@ -10,17 +11,18 @@ const SIGNED_OUT_CODES = new Set(['UNAUTHENTICATED', 'auth/unauthenticated-user'
 
 function classify(errors: GraphQLError[], status: number): Error {
   const codes = errors.map((e) => e.extensions?.code);
-  const message = errors.map((e) => e.message).filter(Boolean).join(' ; ') || `erreur GraphQL (${status})`;
+  const message = errors.map((e) => e.message).filter(Boolean).join(' ; ') || `GraphQL error (${status})`;
   // IMDb : code FORBIDDEN avec « Authentication required but not provided ».
   const authRequired = errors.some((e) => e.extensions?.code === 'FORBIDDEN' && /authentication required/i.test(e.message ?? ''));
   if (codes.some((c) => c && SIGNED_OUT_CODES.has(c)) || status === 401 || authRequired) {
-    return new PauseError('signed_out', 'La session a expiré : reconnectez-vous au site puis reprenez.');
+    return new PauseError('signed_out', msg('err.signedOut'));
   }
   // Le schéma a changé : continuer produirait des erreurs en série.
   if (codes.includes('GRAPHQL_VALIDATION_FAILED')) {
-    return new PauseError('adapter_outdated', `Le site a modifié son API (${message}). L'adaptateur doit être mis à jour.`);
+    return new PauseError('adapter_outdated', msg('err.adapterOutdated', { detail: message }));
   }
-  return new Error(message);
+  // Message d'erreur du serveur : affiché tel quel.
+  return new LocalizedError(raw(message));
 }
 
 /** Requête GraphQL via le client limité du contexte, avec classement des erreurs. */
@@ -51,9 +53,9 @@ export async function gql<T>(ctx: AdapterContext, endpoint: string, query: strin
   }
 
   const json = tryParse(body);
-  if (!json) throw new PauseError('adapter_outdated', `Réponse inattendue de ${new URL(endpoint).host} (pas du JSON).`);
+  if (!json) throw new PauseError('adapter_outdated', msg('err.notJson', { host: new URL(endpoint).host }));
   if (json.errors?.length) throw classify(json.errors, status);
-  if (status >= 400) throw new HttpError(status, `${new URL(endpoint).host} a répondu ${status}`, body);
+  if (status >= 400) throw new HttpError(status, msg('err.http', { host: new URL(endpoint).host, status }), body);
   return json.data as T;
 }
 

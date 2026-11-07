@@ -1,3 +1,4 @@
+import { LocalizedError, msg } from '../../core/i18n';
 import type { Candidate, Page } from '../../core/adapter';
 import { isoDurationToMinutes } from '../../core/graphql';
 import type { PivotEntry, PivotWork, PlatformRef } from '../../core/pivot';
@@ -71,7 +72,7 @@ export function workOf(e: AcMovie): PivotWork | null {
 /** Convertit une page de réponse en entrées pivot. Les identifiants de nœud (qui contiennent l'ID utilisateur) sont ignorés. */
 export function parseMoviesRated(data: MoviesRatedResponse, fetchedAt: string): Page<PivotEntry> {
   const conn = data.me?.user?.social.relatedEntities.moviesSeen;
-  if (!conn) throw new Error('Réponse AlloCiné sans liste de films (session absente ?)');
+  if (!conn) throw new LocalizedError(msg('err.noRatingList', { platform: 'AlloCiné' }));
 
   const items: PivotEntry[] = [];
   for (const { node } of conn.edges) {

@@ -1,3 +1,4 @@
+import { errorMsg } from '../core/i18n';
 import { handle, onAlarm, pauseAfterBrowserRestart, resumeActive } from '../background/orchestrator';
 import type { Request } from '../background/messages';
 
@@ -13,7 +14,8 @@ export default defineBackground(() => {
     if (!fromExtensionPage) return undefined;
     return handle(message).then(
       (value) => ({ ok: true, value }),
-      (e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+      // L'erreur voyage sous forme de message traduisible : l'interface l'affiche dans sa langue.
+      (e: unknown) => ({ ok: false, error: errorMsg(e) }),
     );
   });
 

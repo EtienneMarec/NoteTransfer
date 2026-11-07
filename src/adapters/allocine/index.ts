@@ -1,6 +1,7 @@
 import type { AdapterContext, Candidate, PlatformAdapter } from '../../core/adapter';
 import { isValidRating } from '../../core/convert';
 import { PauseError } from '../../core/errors';
+import { msg } from '../../core/i18n';
 import { gql } from '../../core/graphql';
 import { titleSimilarity } from '../../core/match/normalize';
 import { HOST_PERMISSIONS } from '../../core/permissions';
@@ -26,7 +27,7 @@ type OpinionResponse = {
 
 async function opinionOf(ctx: AdapterContext, internalId: string) {
   const data = await gql<OpinionResponse>(ctx, GRAPH_ENDPOINT, OPINION, { ids: [entityIdOf(internalId)] });
-  if (!data.me?.user) throw new PauseError('signed_out', 'La session AlloCiné a expiré : reconnectez-vous puis reprenez.');
+  if (!data.me?.user) throw new PauseError('signed_out', msg('err.signedOut'));
   return data.me.user.social.entities.edges[0]?.node.opinion?.content ?? null;
 }
 
@@ -45,14 +46,25 @@ export const allocine: PlatformAdapter = {
     kinds: ['movie'],
     providesExternalIds: [],
     lookupByExternalId: [],
-    notes: 'Lecture et écriture de vos notes via l’API interne du site, depuis un onglet AlloCiné. Pas de date de notation.',
-    writeSideEffects:
-      'Un film qui a déjà une critique sur AlloCiné n’est jamais modifié, pour ne pas risquer de la perdre : changez sa note à la main.',
-    termsWarning:
-      'Les CGU d’AlloCiné interdisent toute extraction automatisée de données, même partielle (art. 7.5), ' +
-      'et les systèmes automatisés envoyant plus de requêtes qu’un humain (art. 8.1). AlloCiné peut suspendre ' +
-      'un compte sans préavis (art. 9). L’extension ne lit et n’écrit que vos propres notes, lentement, mais ce risque ' +
-      'existe. En continuant, vous l’acceptez.',
+    notes: {
+      fr: 'Lecture et écriture de vos notes via l’API interne du site, depuis un onglet AlloCiné. Pas de date de notation.',
+      en: 'Reads and writes your ratings through the site’s internal API, from an AlloCiné tab. No rating dates.',
+    },
+    writeSideEffects: {
+      fr: 'Un film qui a déjà une critique sur AlloCiné n’est jamais modifié, pour ne pas risquer de la perdre : changez sa note à la main.',
+      en: 'A film that already has a review on AlloCiné is never changed, so the review cannot be lost: change its rating by hand.',
+    },
+    termsWarning: {
+      fr:
+        'Les CGU d’AlloCiné interdisent toute extraction automatisée de données, même partielle (art. 7.5), ' +
+        'et les systèmes automatisés envoyant plus de requêtes qu’un humain (art. 8.1). AlloCiné peut suspendre ' +
+        'un compte sans préavis (art. 9). L’extension ne lit et n’écrit que vos propres notes, lentement, mais ce risque ' +
+        'existe. En continuant, vous l’acceptez.',
+      en:
+        'AlloCiné’s terms of use forbid any automated data extraction, even partial (art. 7.5), and automated systems ' +
+        'sending more requests than a human would (art. 8.1). AlloCiné may suspend an account without notice (art. 9). ' +
+        'The extension only reads and writes your own ratings, slowly, but this risk exists. By continuing, you accept it.',
+    },
   },
   site: {
     homeUrl: 'https://mon.allocine.fr/mes-films/vus/',
@@ -62,10 +74,16 @@ export const allocine: PlatformAdapter = {
   },
   manualWrite: {
     linkFor: manualLink,
-    instructions:
-      'Ouvrez chaque lien, choisissez le bon film dans la recherche AlloCiné (titre, année, réalisateur), ' +
-      'mettez la note indiquée, puis cochez « Fait ». AlloCiné n’ayant pas d’export, l’extension ne peut pas ' +
-      'repérer les films que vous avez déjà notés : vérifiez la note affichée sur la fiche avant de la changer.',
+    instructions: {
+      fr:
+        'Ouvrez chaque lien, choisissez le bon film dans la recherche AlloCiné (titre, année, réalisateur), ' +
+        'mettez la note indiquée, puis cochez « Fait ». AlloCiné n’ayant pas d’export, l’extension ne peut pas ' +
+        'repérer les films que vous avez déjà notés : vérifiez la note affichée sur la fiche avant de la changer.',
+      en:
+        'Open each link, pick the right film in the AlloCiné search (title, year, director), set the rating shown, ' +
+        'then tick “Done”. AlloCiné has no export, so the extension cannot spot films you already rated: check the ' +
+        'rating shown on the page before changing it.',
+    },
   },
 
   async checkSession(ctx) {
@@ -113,15 +131,15 @@ export const allocine: PlatformAdapter = {
   async writeRating(ctx, ref, value) {
     // AlloCiné arrondit en silence une note invalide (3,3 → 3) : on refuse avant d'envoyer.
     if (!isValidRating(value, SCALES.halfStarsOf5)) {
-      return { ok: false, retryable: false, reason: `note ${value} invalide pour AlloCiné (0,5 à 5, par demi-étoile)` };
+      return { ok: false, retryable: false, reason: msg('write.invalidHalfStars', { value, platform: 'AlloCiné' }) };
     }
     const maintenance = await ctx.http.request({ url: MAINTENANCE_URL, expectJson: true }, ctx.signal);
     if (/"socialApiMaintenance"\s*:\s*true/.test(maintenance.body)) {
-      throw new PauseError('network', 'AlloCiné est en maintenance : réessayez plus tard.');
+      throw new PauseError('network', msg('err.maintenance', { platform: 'AlloCiné' }));
     }
     const existing = await opinionOf(ctx, ref.id);
     if (existing?.review) {
-      return { ok: false, retryable: false, reason: 'ce film a une critique sur AlloCiné : note non modifiée pour ne pas la perdre' };
+      return { ok: false, retryable: false, reason: msg('write.hasReview') };
     }
     const data = await gql<{ addUserOpinion: { userEntityLeaf: { opinion: { content: { rating: number | null } | null } | null } | null } | null }>(
       ctx,
@@ -130,6 +148,6 @@ export const allocine: PlatformAdapter = {
       { id: entityIdOf(ref.id), rating: value },
     );
     const saved = data.addUserOpinion?.userEntityLeaf?.opinion?.content?.rating;
-    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: `réponse inattendue (note ${saved ?? 'absente'})` };
+    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: msg('write.unexpected', { value: saved ?? msg('write.missing') }) };
   },
 };

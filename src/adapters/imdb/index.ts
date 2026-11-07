@@ -1,3 +1,4 @@
+import { LocalizedError, msg } from '../../core/i18n';
 import type { AdapterContext, Candidate, PlatformAdapter } from '../../core/adapter';
 import { PauseError } from '../../core/errors';
 import { csvRecords, pick } from '../../core/files/csv';
@@ -20,7 +21,7 @@ const toInt = (s: string | undefined) => (s && /^\d+$/.test(s) ? Number(s) : und
 export function parseImdbRatings(text: string, fetchedAt: string): PivotEntry[] {
   const { columns, records } = csvRecords(text);
   if (!columns.includes('const') || !columns.includes('yourrating')) {
-    throw new Error('Fichier non reconnu : il faut l’export « Your Ratings » d’IMDb (colonnes Const et Your Rating).');
+    throw new LocalizedError(msg('file.notImdb'));
   }
   const entries: PivotEntry[] = [];
   for (const r of records) {
@@ -72,13 +73,26 @@ export const imdb: PlatformAdapter = {
     kinds: ['movie'],
     providesExternalIds: ['imdb'],
     lookupByExternalId: ['imdb'],
-    notes: 'Lecture à partir du fichier CSV exporté depuis IMDb, sans requête vers IMDb.',
-    termsWarning:
-      'IMDb n’a pas d’API publique pour noter : l’extension utiliserait l’API interne du site. Les conditions d’IMDb ' +
-      'interdisent les robots et outils d’extraction sans accord écrit, et IMDb peut retirer son autorisation à tout moment. ' +
-      'Votre compte IMDb est souvent aussi votre compte Amazon : une sanction pourrait le toucher. ' +
-      'Si vous ne voulez pas prendre ce risque, choisissez le mode « à la main ».',
-    writeSideEffects: 'Une note IMDb ne peut pas valoir 0 : l’extension n’envoie que des notes de 1 à 10.',
+    notes: {
+      fr: 'Lecture à partir du fichier CSV exporté depuis IMDb, sans requête vers IMDb.',
+      en: 'Reads the CSV file exported from IMDb, with no request sent to IMDb.',
+    },
+    termsWarning: {
+      fr:
+        'IMDb n’a pas d’API publique pour noter : l’extension utiliserait l’API interne du site. Les conditions d’IMDb ' +
+        'interdisent les robots et outils d’extraction sans accord écrit, et IMDb peut retirer son autorisation à tout moment. ' +
+        'Votre compte IMDb est souvent aussi votre compte Amazon : une sanction pourrait le toucher. ' +
+        'Si vous ne voulez pas prendre ce risque, choisissez le mode « à la main ».',
+      en:
+        'IMDb has no public API for rating: the extension would use the site’s internal API. IMDb’s conditions of use ' +
+        'forbid robots and extraction tools without written consent, and IMDb may withdraw its permission at any time. ' +
+        'Your IMDb account is often your Amazon account too: a sanction could affect it. ' +
+        'If you do not want to take this risk, choose the manual mode.',
+    },
+    writeSideEffects: {
+      fr: 'Une note IMDb ne peut pas valoir 0 : l’extension n’envoie que des notes de 1 à 10.',
+      en: 'An IMDb rating cannot be 0: the extension only sends ratings from 1 to 10.',
+    },
   },
   site: {
     homeUrl: 'https://www.imdb.com/',
@@ -88,14 +102,24 @@ export const imdb: PlatformAdapter = {
   },
   manualWrite: {
     linkFor: manualLink,
-    instructions:
-      'Ouvrez chaque lien, notez le film sur IMDb avec la note indiquée, puis cochez « Fait ». ' +
-      'Pour un lien de recherche, choisissez vous-même le bon film (titre, année, réalisateur).',
+    instructions: {
+      fr:
+        'Ouvrez chaque lien, notez le film sur IMDb avec la note indiquée, puis cochez « Fait ». ' +
+        'Pour un lien de recherche, choisissez vous-même le bon film (titre, année, réalisateur).',
+      en:
+        'Open each link, rate the film on IMDb with the rating shown, then tick “Done”. ' +
+        'For a search link, pick the right film yourself (title, year, director).',
+    },
   },
   exportFileTypes: '.csv,text/csv',
-  exportInstructions:
-    'Sur imdb.com, ouvrez « Vos notes » (menu de votre compte), puis le menu ⋮ et « Exporter ». ' +
-    'Téléchargez le fichier CSV depuis la page des exports, puis choisissez-le ici.',
+  exportInstructions: {
+    fr:
+      'Sur imdb.com, ouvrez « Vos notes » (menu de votre compte), puis le menu ⋮ et « Exporter ». ' +
+      'Téléchargez le fichier CSV depuis la page des exports, puis choisissez-le ici.',
+    en:
+      'On imdb.com, open “Your ratings” (account menu), then the ⋮ menu and “Export”. ' +
+      'Download the CSV file from the exports page, then choose it here.',
+  },
 
   async checkSession(ctx) {
     try {
@@ -141,10 +165,10 @@ export const imdb: PlatformAdapter = {
   async writeRating(ctx, ref, value) {
     // 0 supprimerait la note : seules les valeurs entières de 1 à 10 sont envoyées.
     if (!Number.isInteger(value) || value < 1 || value > 10) {
-      return { ok: false, retryable: false, reason: `note ${value} invalide pour IMDb (entier de 1 à 10)` };
+      return { ok: false, retryable: false, reason: msg('write.invalidInteger', { value, platform: 'IMDb' }) };
     }
     const data = await gqlImdb<{ rateTitle: { rating: { value: number } | null } | null }>(ctx, RATE, { rating: value, titleId: ref.id });
     const saved = data.rateTitle?.rating?.value;
-    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: `réponse inattendue (note ${saved ?? 'absente'})` };
+    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: msg('write.unexpected', { value: saved ?? msg('write.missing') }) };
   },
 };

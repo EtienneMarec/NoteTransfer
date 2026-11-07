@@ -1,3 +1,5 @@
+import { PauseError } from '../../core/errors';
+import { LocalizedError, msg } from '../../core/i18n';
 import type { AdapterContext, Candidate, PlatformAdapter, WorkQuery } from '../../core/adapter';
 import { gql } from '../../core/graphql';
 import { titleSimilarity } from '../../core/match/normalize';
@@ -65,8 +67,14 @@ export const senscritique: PlatformAdapter = {
     kinds: ['movie'],
     providesExternalIds: [],
     lookupByExternalId: [],
-    notes: 'Lecture et écriture via l’API interne du site, depuis un onglet SensCritique.',
-    writeSideEffects: 'Noter un film sur SensCritique le marque comme vu et le retire de vos envies.',
+    notes: {
+      fr: 'Lecture et écriture via l’API interne du site, depuis un onglet SensCritique.',
+      en: 'Reads and writes through the site’s internal API, from a SensCritique tab.',
+    },
+    writeSideEffects: {
+      fr: 'Noter un film sur SensCritique le marque comme vu et le retire de vos envies.',
+      en: 'Rating a film on SensCritique marks it as watched and removes it from your watchlist.',
+    },
   },
   site: {
     homeUrl: 'https://www.senscritique.com/',
@@ -85,13 +93,13 @@ export const senscritique: PlatformAdapter = {
 
   async readRatings(ctx, cursor) {
     const me = await gql<{ me: { username: string } | null }>(ctx, APOLLO_ENDPOINT, ME);
-    if (!me.me) throw new Error('Session SensCritique absente');
+    if (!me.me) throw new PauseError('signed_out', msg('err.signedOut'));
     const offset = cursor ? Number(cursor) : 0;
     const data = await gql<{
       user: { collection: { total: number; products: Parameters<typeof entryFromCollection>[0][] } } | null;
     }>(ctx, APOLLO_ENDPOINT, COLLECTION, { username: me.me.username, limit: COLLECTION_PAGE_SIZE, offset });
     const col = data.user?.collection;
-    if (!col) throw new Error('Collection SensCritique introuvable');
+    if (!col) throw new LocalizedError(msg('err.noCollection', { platform: 'SensCritique' }));
     const fetchedAt = new Date().toISOString();
     const next = offset + col.products.length;
     return {
@@ -132,14 +140,14 @@ export const senscritique: PlatformAdapter = {
       CURRENT_USER_RATING,
       { id: Number(ref.id) },
     );
-    if (!data.product) throw new Error(`Film SensCritique ${ref.id} introuvable`);
+    if (!data.product) throw new LocalizedError(msg('err.filmNotFound', { platform: 'SensCritique', id: ref.id }));
     const rating = data.product.currentUserInfos?.rating;
     return typeof rating === 'number' && rating > 0 ? { value: rating, scale: SCALES.integersOf10 } : null;
   },
 
   async writeRating(ctx, ref, value) {
     if (!Number.isInteger(value) || value < 1 || value > 10) {
-      return { ok: false, retryable: false, reason: `note ${value} invalide pour SensCritique (entier de 1 à 10)` };
+      return { ok: false, retryable: false, reason: msg('write.invalidInteger', { value, platform: 'SensCritique' }) };
     }
     const data = await gql<{ productRate: { currentUserInfos: { rating: number | null } | null } | null }>(
       ctx,
@@ -148,6 +156,6 @@ export const senscritique: PlatformAdapter = {
       { productId: Number(ref.id), rating: value },
     );
     const saved = data.productRate?.currentUserInfos?.rating;
-    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: `réponse inattendue (note ${saved ?? 'absente'})` };
+    return saved === value ? { ok: true } : { ok: false, retryable: false, reason: msg('write.unexpected', { value: saved ?? msg('write.missing') }) };
   },
 };

@@ -1,4 +1,5 @@
 import { formatRating } from './convert';
+import { msg, render, type Lang, type Msg } from './i18n';
 import { isWriteAction } from './job/plan';
 import type { JobRow, PlannedAction, RowStatus, TransferJob } from './job/types';
 import { PIVOT_SCHEMA_VERSION, type PivotExport } from './pivot';
@@ -12,34 +13,24 @@ export function toCsv(header: string[], rows: Array<Array<string | number | unde
   return [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }
 
-export const ACTION_LABELS: Record<PlannedAction, string> = {
-  create: 'créer',
-  overwrite: 'écraser',
-  skip_identical: 'ignorer : déjà identique',
-  skip_conflict: 'ignorer : note existante conservée',
-  skip_review: 'ignorer : correspondance à vérifier',
-  skip_unmatched: 'ignorer : introuvable',
-  skip_unrated: 'ignorer : pas de note source',
-};
-
-export const STATUS_LABELS: Record<RowStatus, string> = {
-  pending: 'en attente',
-  in_flight: 'en cours',
-  done: 'réussi',
-  skipped: 'ignoré',
-  failed: 'échec',
-};
+export const actionMsg = (action: PlannedAction): Msg => msg(`action.${action}`);
+export const statusMsg = (status: RowStatus): Msg => msg(`status.${status}`);
 
 export interface BackupFiles {
   json: string;
   csv: string;
 }
 
+const BACKUP_HEADERS: Record<Lang, string[]> = {
+  fr: ['plateforme', 'id', 'url', 'titre', 'titre_original', 'annee', 'note', 'echelle_max', 'date_note'],
+  en: ['platform', 'id', 'url', 'title', 'original_title', 'year', 'rating', 'scale_max', 'rated_at'],
+};
+
 /**
  * Sauvegarde exportée avant toute écriture : toutes les notes source,
  * plus les notes de destination qui seraient écrasées.
  */
-export function buildBackup(job: TransferJob, rows: JobRow[], now = new Date()): BackupFiles {
+export function buildBackup(job: TransferJob, rows: JobRow[], now = new Date(), lang: Lang = 'fr'): BackupFiles {
   const source: PivotExport = { schemaVersion: PIVOT_SCHEMA_VERSION, exportedAt: now.toISOString(), entries: rows.map((r) => r.entry) };
   const overwritten = rows
     .filter((r) => r.selected && r.action === 'overwrite' && r.existing && r.match?.ref)
@@ -50,7 +41,7 @@ export function buildBackup(job: TransferJob, rows: JobRow[], now = new Date()):
     2,
   );
   const csv = toCsv(
-    ['plateforme', 'id', 'url', 'titre', 'titre_original', 'annee', 'note', 'echelle_max', 'date_note'],
+    BACKUP_HEADERS[lang],
     rows.map(({ entry: e }) => {
       const ref = e.work.refs.find((r) => r.platform === e.source.platform);
       return [e.source.platform, ref?.id, ref?.url, e.work.title, e.work.originalTitle, e.work.year, e.rating?.value, e.rating?.scale.max, e.rating?.ratedAt];
@@ -79,39 +70,46 @@ export function summarize(job: TransferJob, rows: JobRow[]): ReportSummary {
   return s;
 }
 
-function reasonOf(r: JobRow): string {
+/** Raison affichée pour une ligne : résultat d'écriture, sinon action prévue. */
+export function reasonOf(r: JobRow): Msg | undefined {
   if (r.outcome) return r.outcome.message;
-  if (!r.selected && isWriteAction(r.action)) return 'décochée par vous';
-  return r.action ? ACTION_LABELS[r.action] : '';
+  if (!r.selected && isWriteAction(r.action)) return msg('report.uncheckedByYou');
+  return r.action ? actionMsg(r.action) : undefined;
 }
 
-const fr = (n: number) => n.toLocaleString('fr-FR');
+const REPORT_HEADERS: Record<Lang, string[]> = {
+  fr: ['titre', 'annee', 'note_source', 'note_convertie', 'conversion', 'note_existante', 'correspondance', 'confiance', 'resultat', 'raison', 'simule'],
+  en: ['title', 'year', 'source_rating', 'converted_rating', 'conversion', 'existing_rating', 'match', 'confidence', 'result', 'reason', 'simulated'],
+};
 
-export function buildReport(job: TransferJob, rows: JobRow[], now = new Date()): BackupFiles {
+export function buildReport(job: TransferJob, rows: JobRow[], now = new Date(), lang: Lang = 'fr'): BackupFiles {
+  const num = (n: number) => n.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US');
+  const header = REPORT_HEADERS[lang];
   const lines = rows.map((r) => {
     const src = r.entry.rating;
     const status: RowStatus = !r.selected || !isWriteAction(r.action) ? 'skipped' : r.status;
-    return {
-      titre: r.entry.work.title,
-      annee: r.entry.work.year,
-      note_source: src ? formatRating(src.value, src.scale) : '',
-      // Même format décimal que note_source (virgule), pour un rapport cohérent.
-      note_convertie: r.conversion ? fr(r.conversion.value) : '',
-      conversion: r.conversion && !r.conversion.exact ? `${fr(r.conversion.raw)} → ${fr(r.conversion.value)} (${r.conversion.rule})` : '',
-      note_existante: r.existing ? fr(r.existing.value) : '',
-      correspondance: r.match?.ref?.url ?? r.match?.ref?.id ?? '',
-      confiance: r.match?.confidence ?? '',
-      resultat: STATUS_LABELS[status],
-      raison: reasonOf(r),
-      simule: r.outcome?.simulated ? 'oui' : '',
-    };
+    const c = r.conversion;
+    const values = [
+      r.entry.work.title,
+      r.entry.work.year,
+      src ? formatRating(src.value, src.scale, lang) : '',
+      // Même format décimal que note_source, pour un rapport cohérent.
+      c ? num(c.value) : '',
+      c && !c.exact ? `${num(c.raw)} → ${num(c.value)} (${render(c.rule, lang)})` : '',
+      r.existing ? num(r.existing.value) : '',
+      r.match?.ref?.url ?? r.match?.ref?.id ?? '',
+      r.match ? render(msg(`confidence.${r.match.confidence}`), lang) : '',
+      render(statusMsg(status), lang),
+      render(reasonOf(r), lang),
+      r.outcome?.simulated ? (lang === 'fr' ? 'oui' : 'yes') : '',
+    ];
+    return Object.fromEntries(header.map((h, i) => [h, values[i]])) as Record<string, string | number | undefined>;
   });
   const json = JSON.stringify(
     { kind: 'notes-transfert-report', generatedAt: now.toISOString(), job: { source: job.source, destination: job.destination, dryRun: job.dryRun }, summary: summarize(job, rows), rows: lines },
     null,
     2,
   );
-  const header = Object.keys(lines[0] ?? { titre: '' });
-  const csv = toCsv(header, lines.map((l) => header.map((h) => (l as Record<string, string | number | undefined>)[h])));
+  const csv = toCsv(header, lines.map((l) => header.map((h) => l[h])));
   return { json, csv };
 }

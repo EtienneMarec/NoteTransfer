@@ -1,3 +1,4 @@
+import { LocalizedError, msg, type Lang, type Msg } from './i18n';
 import type { RatingScale } from './pivot';
 
 export type RoundingMode = 'nearest' | 'down' | 'up';
@@ -9,14 +10,10 @@ export interface ConversionResult {
   /** Valeur avant alignement sur le pas de destination. */
   raw: number;
   /** Explication affichable quand la conversion est inexacte. */
-  rule?: string;
+  rule?: Msg;
 }
 
-const ROUNDING_LABELS: Record<RoundingMode, string> = {
-  nearest: 'arrondi au plus proche, demi vers le haut',
-  down: 'arrondi vers le bas',
-  up: 'arrondi vers le haut',
-};
+const ROUNDING_RULES = { nearest: 'round.nearest', down: 'round.down', up: 'round.up' } as const satisfies Record<RoundingMode, Msg['key']>;
 
 // Évite les erreurs flottantes (0.1 + 0.2) en travaillant au millionième.
 const PRECISION = 1e6;
@@ -39,7 +36,7 @@ export function convertRating(
   rounding: RoundingMode = 'nearest',
 ): ConversionResult {
   if (!isValidRating(value, from)) {
-    throw new RangeError(`Note ${value} hors de l'échelle ${from.min}–${from.max} (pas ${from.step})`);
+    throw new LocalizedError(msg('err.outOfScale', { value, min: from.min, max: from.max, step: from.step }));
   }
   const raw = fix((value / from.max) * to.max);
 
@@ -52,10 +49,10 @@ export function convertRating(
   if (clamped === raw) return { value: clamped, exact: true, raw };
 
   const outOfBounds = raw < to.min || raw > to.max;
-  const rule = outOfBounds ? `ramenée dans les bornes ${to.min}–${to.max}` : ROUNDING_LABELS[rounding];
+  const rule = outOfBounds ? msg('round.clamped', { min: to.min, max: to.max }) : msg(ROUNDING_RULES[rounding]);
   return { value: clamped, exact: false, raw, rule };
 }
 
-export function formatRating(value: number, scale: RatingScale): string {
-  return `${value.toLocaleString('fr-FR')}/${scale.max}`;
+export function formatRating(value: number, scale: RatingScale, lang: Lang = 'fr'): string {
+  return `${value.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US')}/${scale.max}`;
 }

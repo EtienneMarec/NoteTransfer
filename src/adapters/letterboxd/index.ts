@@ -1,3 +1,4 @@
+import { LocalizedError, msg } from '../../core/i18n';
 import type { ImportFile, PlatformAdapter } from '../../core/adapter';
 import { csvRecords, pick } from '../../core/files/csv';
 import { isZip, readZipText } from '../../core/files/zip';
@@ -17,7 +18,7 @@ export const MAX_IMPORT_ROWS = 1_900;
 export function parseLetterboxdRatings(text: string, fetchedAt: string): PivotEntry[] {
   const { columns, records } = csvRecords(text);
   if (!columns.includes('name') || !columns.includes('rating')) {
-    throw new Error('Fichier non reconnu : il faut ratings.csv (ou le ZIP) de l’export Letterboxd.');
+    throw new LocalizedError(msg('file.notLetterboxd'));
   }
   const entries: PivotEntry[] = [];
   for (const r of records) {
@@ -48,7 +49,7 @@ export function parseLetterboxdRatings(text: string, fetchedAt: string): PivotEn
 async function exportText(file: { name: string; bytes: Uint8Array }): Promise<string> {
   if (!isZip(file.bytes)) return new TextDecoder().decode(file.bytes);
   const text = await readZipText(file.bytes, (n) => n === 'ratings.csv' || n.endsWith('/ratings.csv'));
-  if (text === undefined) throw new Error('Cette archive ne contient pas de ratings.csv : est-ce bien l’export Letterboxd ?');
+  if (text === undefined) throw new LocalizedError(msg('file.zipWithoutRatings'));
   return text;
 }
 
@@ -113,21 +114,40 @@ export const letterboxd: PlatformAdapter = {
     kinds: ['movie'],
     providesExternalIds: [],
     lookupByExternalId: ['imdb', 'tmdb'],
-    notes: 'Par les fichiers officiels d’export et d’import. Aucune requête n’est envoyée à Letterboxd.',
-    writeSideEffects:
-      'Letterboxd fait lui-même le rapprochement des films et remplace sans prévenir une note déjà présente. ' +
-      'Les films importés sont aussi marqués comme vus. Vérifiez son récapitulatif avant de confirmer : l’import ne peut pas être annulé. ' +
-      'L’importeur est normalement réservé aux membres Pro (ouvert à tous pour une durée limitée en novembre 2026).',
+    notes: {
+      fr: 'Par les fichiers officiels d’export et d’import. Aucune requête n’est envoyée à Letterboxd.',
+      en: 'Through the official export and import files. No request is sent to Letterboxd.',
+    },
+    writeSideEffects: {
+      fr:
+        'Letterboxd fait lui-même le rapprochement des films et remplace sans prévenir une note déjà présente. ' +
+        'Les films importés sont aussi marqués comme vus. Vérifiez son récapitulatif avant de confirmer : l’import ne peut pas être annulé. ' +
+        'L’importeur est normalement réservé aux membres Pro (ouvert à tous pour une durée limitée en novembre 2026).',
+      en:
+        'Letterboxd matches the films itself and silently replaces an existing rating. ' +
+        'Imported films are also marked as watched. Check its summary before confirming: an import cannot be undone. ' +
+        'The importer is normally reserved for Pro members (open to everyone for a limited time in November 2026).',
+    },
   },
   exportFileTypes: '.zip,.csv,application/zip,text/csv',
-  exportInstructions:
-    'Sur letterboxd.com, ouvrez Settings → Data → Export your data. Choisissez ici le fichier ZIP téléchargé, ' +
-    'ou le fichier ratings.csv qu’il contient.',
-  importInstructions:
-    '1. Connectez-vous à Letterboxd et ouvrez https://letterboxd.com/import/. ' +
-    '2. Choisissez le fichier généré (un par un s’il y en a plusieurs). ' +
-    '3. Vérifiez le récapitulatif : Letterboxd y signale les films non trouvés ou ambigus, que vous pouvez corriger. ' +
-    '4. Confirmez l’import.',
+  exportInstructions: {
+    fr:
+      'Sur letterboxd.com, ouvrez Settings → Data → Export your data. Choisissez ici le fichier ZIP téléchargé, ' +
+      'ou le fichier ratings.csv qu’il contient.',
+    en: 'On letterboxd.com, open Settings → Data → Export your data. Choose the downloaded ZIP file here, or the ratings.csv file inside it.',
+  },
+  importInstructions: {
+    fr:
+      '1. Connectez-vous à Letterboxd et ouvrez https://letterboxd.com/import/. ' +
+      '2. Choisissez le fichier généré (un par un s’il y en a plusieurs). ' +
+      '3. Vérifiez le récapitulatif : Letterboxd y signale les films non trouvés ou ambigus, que vous pouvez corriger. ' +
+      '4. Confirmez l’import.',
+    en:
+      '1. Sign in to Letterboxd and open https://letterboxd.com/import/. ' +
+      '2. Choose the generated file (one at a time if there are several). ' +
+      '3. Check the summary: Letterboxd flags films it could not find or that are ambiguous, which you can fix. ' +
+      '4. Confirm the import.',
+  },
 
   async checkSession() {
     return { state: 'ok', displayName: 'fichiers' };

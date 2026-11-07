@@ -1,13 +1,14 @@
 import type { BlockReason } from './adapter';
+import { render, type Msg } from './i18n';
 
 /** Erreur qui doit mettre le transfert en pause (et non faire échouer une seule ligne). */
 export class PauseError extends Error {
   constructor(
     readonly kind: 'blocked' | 'rate_limited' | 'network' | 'adapter_outdated' | 'signed_out',
-    message: string,
+    readonly msg: Msg,
     readonly detail?: { reason?: BlockReason; url?: string },
   ) {
-    super(message);
+    super(render(msg, 'fr'));
     this.name = 'PauseError';
   }
 }
@@ -16,10 +17,10 @@ export class PauseError extends Error {
 export class HttpError extends Error {
   constructor(
     readonly status: number,
-    message: string,
+    readonly msg: Msg,
     readonly body?: string,
   ) {
-    super(message);
+    super(render(msg, 'fr'));
     this.name = 'HttpError';
   }
 }

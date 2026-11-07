@@ -1,6 +1,7 @@
 import type { Candidate } from '../adapter';
 import type { ConversionResult, RoundingMode } from '../convert';
 import type { PauseError } from '../errors';
+import type { Msg } from '../i18n';
 import type { Confidence } from '../match/score';
 import type { PivotEntry, PivotRating, PlatformId, PlatformRef } from '../pivot';
 
@@ -39,7 +40,7 @@ export interface TransferJob {
   destinationExportAppliedAt?: string;
   pause?: {
     kind: PauseError['kind'] | 'user';
-    message: string;
+    message: Msg;
     at: string;
     url?: string;
     /** Phase à reprendre. */
@@ -62,7 +63,7 @@ export interface RowMatch {
   confidence: Confidence;
   ref?: PlatformRef;
   score?: number;
-  reason: string;
+  reason: Msg;
   candidates: Array<{ candidate: Candidate; score: number }>;
   /** Vrai si l'utilisateur a choisi ou validé la correspondance. */
   confirmedByUser: boolean;
@@ -81,5 +82,5 @@ export interface JobRow {
   selected: boolean;
   status: RowStatus;
   attempts: number;
-  outcome?: { at: string; message: string; verified?: boolean; simulated?: boolean };
+  outcome?: { at: string; message: Msg; verified?: boolean; simulated?: boolean };
 }

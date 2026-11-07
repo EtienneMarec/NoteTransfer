@@ -1,5 +1,6 @@
 import type { AdapterContext, Candidate, PlatformAdapter, WorkQuery } from '../adapter';
 import { isAbortError, PauseError } from '../errors';
+import { LocalizedError, msg } from '../i18n';
 import { decideMatch } from '../match/score';
 import type { PivotEntry, PivotWork, PlatformRef } from '../pivot';
 import { isWriteAction, planRow } from './plan';
@@ -122,11 +123,11 @@ function fileMatch(destination: PlatformAdapter, row: JobRow): RowMatch {
   const ids = destination.capabilities.lookupByExternalId.filter((k) => row.entry.work.externalIds[k] !== undefined);
   const ref: PlatformRef = { platform: destination.id, id: 'fichier-import' };
   return ids.length
-    ? { confidence: 'sure', ref, reason: `${destination.displayName} rapprochera par identifiant ${ids.join('/').toUpperCase()}`, candidates: [], confirmedByUser: false }
+    ? { confidence: 'sure', ref, reason: msg('match.fileById', { platform: destination.displayName, ids: ids.join('/').toUpperCase() }), candidates: [], confirmedByUser: false }
     : {
         confidence: 'review',
         ref,
-        reason: `${destination.displayName} rapprochera par titre et année : vérifiez son récapitulatif avant de confirmer`,
+        reason: msg('match.fileByTitle', { platform: destination.displayName }),
         candidates: [],
         confirmedByUser: false,
       };
@@ -140,8 +141,8 @@ function manualMatch(destination: PlatformAdapter, row: JobRow): RowMatch {
   const link = destination.manualWrite!.linkFor(row.entry.work);
   const ref: PlatformRef = { platform: destination.id, id: link.exact ? link.url : 'recherche', url: link.url };
   return link.exact
-    ? { confidence: 'sure', ref, reason: 'fiche exacte (identifiant connu)', candidates: [], confirmedByUser: false }
-    : { confidence: 'review', ref, reason: 'à choisir vous-même sur le site, via le lien de recherche', candidates: [], confirmedByUser: true };
+    ? { confidence: 'sure', ref, reason: msg('match.manualExact'), candidates: [], confirmedByUser: false }
+    : { confidence: 'review', ref, reason: msg('match.manualSearch'), candidates: [], confirmedByUser: true };
 }
 
 export const isManual = (job: TransferJob) => job.writeMode === 'manual';
@@ -171,7 +172,7 @@ export async function runMatchStep(jobId: string, deps: PipelineDeps): Promise<P
   return onPause(deps, job, 'matching', async () => {
     // Pas de note source : inutile d'interroger la destination.
     if (!row.entry.rating) {
-      await store.putRows([await plan(deps, job, { ...row, match: { confidence: 'not_found', reason: 'pas de note source', candidates: [], confirmedByUser: false } })]);
+      await store.putRows([await plan(deps, job, { ...row, match: { confidence: 'not_found', reason: msg('match.noSourceRating'), candidates: [], confirmedByUser: false } })]);
       return 'progressed' as const;
     }
 
@@ -192,7 +193,7 @@ export async function runMatchStep(jobId: string, deps: PipelineDeps): Promise<P
       match = {
         confidence: 'sure',
         ref,
-        reason: cached.confirmedByUser ? 'correspondance validée par vous' : 'correspondance mémorisée',
+        reason: msg(cached.confirmedByUser ? 'match.validatedByYou' : 'match.remembered'),
         candidates: [],
         confirmedByUser: cached.confirmedByUser,
       };
@@ -239,15 +240,15 @@ export async function setRowMatch(
   const { store, destination } = deps;
   const job = await store.getJob(jobId);
   const row = await store.getRow(jobId, rowId);
-  if (!job || !row || job.phase !== 'review') throw new Error('Correction impossible dans cet état');
+  if (!job || !row || job.phase !== 'review') throw new LocalizedError(msg('err.invalidState'));
   const sourceRef = row.entry.work.refs.find((r) => r.platform === job.source)!;
 
   const previous = row.match?.candidates ?? [];
   const candidates =
     candidate && !previous.some((c) => c.candidate.ref.id === candidate.ref.id) ? [{ candidate, score: 0 }, ...previous] : previous;
   const match: RowMatch = candidate
-    ? { confidence: 'sure', ref: candidate.ref, reason: 'choisie par vous', candidates, confirmedByUser: true }
-    : { confidence: 'not_found', reason: 'aucune correspondance selon vous', candidates, confirmedByUser: true };
+    ? { confidence: 'sure', ref: candidate.ref, reason: msg('match.chosenByYou'), candidates, confirmedByUser: true }
+    : { confidence: 'not_found', reason: msg('match.noneByYou'), candidates, confirmedByUser: true };
 
   const existing =
     candidate && destination.getExistingRating ? await destination.getExistingRating(deps.destinationCtx, candidate.ref) : null;
@@ -278,7 +279,7 @@ export async function setRowMatch(
 export async function setRowSelected(store: JobStore, jobId: string, rowId: string, selected: boolean): Promise<JobRow> {
   const job = await store.getJob(jobId);
   const row = await store.getRow(jobId, rowId);
-  if (!job || !row || job.phase !== 'review') throw new Error('Sélection impossible dans cet état');
+  if (!job || !row || job.phase !== 'review') throw new LocalizedError(msg('err.invalidState'));
   let next: JobRow = { ...row, selected };
   if (selected) {
     if (row.action === 'skip_review' && row.match) {
@@ -309,7 +310,7 @@ export async function applyDestinationExport(
   const { store, destination } = deps;
   const job = await store.getJob(jobId);
   if (!job || job.phase !== 'review' || (destination.capabilities.write !== 'file' && !isManual(job))) {
-    throw new Error('Opération impossible dans cet état');
+    throw new LocalizedError(msg('err.invalidState'));
   }
   const candidates: Array<Candidate & { rating: PivotEntry['rating'] }> = existingEntries
     .filter((e) => e.rating)
@@ -340,9 +341,9 @@ export async function setRowsSelected(store: JobStore, jobId: string, rowIds: st
 /** Destination par fichier : les lignes cochées sont incluses dans le fichier d'import généré. */
 export async function completeFileExport(store: JobStore, jobId: string, fileNames: string[], now = new Date()): Promise<void> {
   const job = await store.getJob(jobId);
-  if (!job || job.phase !== 'review') throw new Error('Export impossible dans cet état');
+  if (!job || job.phase !== 'review') throw new LocalizedError(msg('err.invalidState'));
   const rows = await store.getRows(jobId);
-  const message = `incluse dans ${fileNames.join(', ')} : à importer sur le site`;
+  const message = msg('outcome.inImportFile', { files: fileNames.join(', ') });
   await store.putRows(
     rows
       .filter((r) => r.selected && isWriteAction(r.action))
@@ -369,8 +370,8 @@ export async function setManualRowStatus(
 ): Promise<JobRow> {
   const job = await store.getJob(jobId);
   const row = await store.getRow(jobId, rowId);
-  if (!job || !row || !(job.phase === 'manual' || job.phase === 'done') || !isManual(job)) throw new Error('Opération impossible dans cet état');
-  const message = status === 'done' ? 'notée à la main par vous' : status === 'skipped' ? 'sautée par vous' : '';
+  if (!job || !row || !(job.phase === 'manual' || job.phase === 'done') || !isManual(job)) throw new LocalizedError(msg('err.invalidState'));
+  const message = msg(status === 'done' ? 'outcome.manualDone' : 'outcome.manualSkipped');
   const next: JobRow = status === 'pending' ? { ...row, status, outcome: undefined } : { ...row, status, outcome: { at: now.toISOString(), message } };
   await store.putRows([next]);
   const remaining = (await store.getRows(jobId)).filter((r) => r.selected && isWriteAction(r.action) && r.status === 'pending');
@@ -385,7 +386,7 @@ export async function setConflictPolicy(
   conflictPolicy: TransferJob['conflictPolicy'],
 ): Promise<void> {
   const job = await deps.store.getJob(jobId);
-  if (!job || job.phase !== 'review') throw new Error('Modification impossible dans cet état');
+  if (!job || job.phase !== 'review') throw new LocalizedError(msg('err.invalidState'));
   const updatedJob = { ...job, conflictPolicy, updatedAt: new Date().toISOString() };
   await deps.store.putJob(updatedJob);
   const rows = await deps.store.getRows(jobId);
