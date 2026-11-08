@@ -15,7 +15,8 @@ export default defineConfig({
   },
   manifest: ({ browser }) => ({
     name: 'Notes Transfert',
-    description: "Transférez vos notes de films d'une plateforme à une autre, en local.",
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     permissions: ['storage', 'alarms', 'scripting'],
     // Demandées à l'exécution, plateforme par plateforme (permissions.request).
     optional_host_permissions: OPTIONAL_HOST_PERMISSIONS,
