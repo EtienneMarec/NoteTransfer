@@ -6,6 +6,7 @@ import page1 from './__fixtures__/movies-seen-page1.json';
 import page2 from './__fixtures__/movies-seen-page2.json';
 import searchMib from './__fixtures__/search-men-in-black-ii.json';
 import { PauseError } from '../../core/errors';
+import { render } from '../../core/i18n';
 import { decideMatch } from '../../core/match/score';
 import { allocine } from './index';
 import { entityIdOf, manualLink, parseAcUrl, parseMoviesRated, type MoviesRatedResponse } from './parse';
@@ -104,7 +105,7 @@ describe('allocine.checkSession', () => {
 describe('allocine.capabilities', () => {
   it('est source et destination, avec avertissement CGU', () => {
     expect(allocine.capabilities).toMatchObject({ read: 'site', write: 'site' });
-    expect(allocine.capabilities.termsWarning).toMatch(/7\.5/);
+    expect(allocine.capabilities.termsWarning?.fr).toMatch(/7\.5/);
   });
 });
 
@@ -176,7 +177,9 @@ describe('allocine comme destination', () => {
 
   it('ne touche jamais un film qui a une critique', async () => {
     const { ctx, calls } = ctxRouting((req) => (req.url.includes('maintenance') ? { socialApiMaintenance: false } : opinion({ rating: 4, review: 'Super film' })));
-    await expect(allocine.writeRating!(ctx, { platform: 'allocine', id: '1' }, 3)).resolves.toMatchObject({ ok: false, reason: expect.stringMatching(/critique/) });
+    const result = await allocine.writeRating!(ctx, { platform: 'allocine', id: '1' }, 3);
+    expect(render(result.ok ? undefined : result.reason, 'fr')).toMatch(/critique/);
+    expect(result.ok).toBe(false);
     expect(calls.some((c) => c.query?.includes('addUserOpinion'))).toBe(false);
   });
 

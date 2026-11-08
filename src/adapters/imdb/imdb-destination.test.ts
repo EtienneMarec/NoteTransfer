@@ -86,7 +86,7 @@ describe('imdb comme destination (API interne)', () => {
 
   it('affiche l’avertissement CGU et propose le mode à la main', () => {
     expect(imdb.capabilities).toMatchObject({ read: 'file', write: 'site' });
-    expect(imdb.capabilities.termsWarning).toMatch(/Amazon/);
+    expect(imdb.capabilities.termsWarning?.fr).toMatch(/Amazon/);
     expect(imdb.manualWrite).toBeDefined();
   });
 });

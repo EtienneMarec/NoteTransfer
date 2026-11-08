@@ -6,6 +6,7 @@ import { allocine } from '../../adapters/allocine';
 import type { AdapterContext, Candidate, PlatformAdapter } from '../adapter';
 import { PauseError } from '../errors';
 import { buildBackup, buildReport, summarize, toCsv } from '../export';
+import { raw } from '../i18n';
 import type { RawResponse } from '../http/client';
 import { silentLogger } from '../log';
 import type { PivotRating, PlatformRef } from '../pivot';
@@ -43,7 +44,7 @@ function fakeSc(catalog: Record<string, Candidate['work'] & { id: string }>, rat
     searchFilm: async (_c, q) => {
       if (pauseNextSearch) {
         pauseNextSearch = false;
-        throw new PauseError('blocked', 'challenge', { reason: 'challenge' });
+        throw new PauseError('blocked', raw('challenge'), { reason: 'challenge' });
       }
       searches.push(q.title);
       return Object.values(catalog).filter((w) => w.title === q.title || w.originalTitle === q.originalTitle).map(toCandidate);
@@ -174,7 +175,7 @@ describe('pipeline AlloCiné → SensCritique (simulation sur fixtures)', () => 
     expect(summarize(done, rows)).toEqual({ done: 4, skipped: 2, failed: 0, pending: 0, simulated: true });
     const report = buildReport(done, rows);
     expect(report.csv.split('\r\n')[0]).toBe('titre,annee,note_source,note_convertie,conversion,note_existante,correspondance,confiance,resultat,raison,simule');
-    expect(report.csv).toContain('MIIB,2002,3/5,6,,,101,sure,réussi,simulation : aucune écriture,oui');
+    expect(report.csv).toContain('MIIB,2002,3/5,6,,,101,sûr,réussi,simulation : aucune écriture,oui');
   });
 
   it('exporte une sauvegarde complète avant écriture, sans identifiant utilisateur', async () => {

@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AdapterContext, PlatformAdapter, WriteResult } from '../adapter';
 import { HttpError, PauseError } from '../errors';
+import { msg, raw, render } from '../i18n';
 import { silentLogger } from '../log';
 import type { PivotRating, PlatformRef } from '../pivot';
 import { SCALES } from '../scales';
@@ -96,7 +97,7 @@ function row(order: number, sourceValue: number, destId: string, existing: numbe
     match: {
       confidence: 'sure',
       ref: { platform: 'senscritique', id: destId },
-      reason: 'test',
+      reason: raw('test'),
       candidates: [],
       confirmedByUser: false,
     },
@@ -169,7 +170,7 @@ describe('runWriteStep', () => {
     const reopened = await openJobStore(`test-${dbCounter}`);
     expect(await runUntilStopped('job1', { store: reopened, destination: dest.adapter, ctx: ctx() })).toBe('done');
     expect(dest.writes).toEqual([['b', 8]]);
-    expect((await reopened.getRow('job1', 'ac-1'))?.outcome?.message).toBe('déjà enregistrée (vérifiée à la reprise)');
+    expect((await reopened.getRow('job1', 'ac-1'))?.outcome?.message).toEqual(msg('outcome.verifiedOnResume'));
   });
 
   it('vérifie avant de conclure à l’échec quand l’erreur survient après l’envoi', async () => {
@@ -194,7 +195,7 @@ describe('runWriteStep', () => {
   it('se met en pause sur un blocage, puis reprend sans doublon', async () => {
     const dest = fakeDestination();
     await setup([row(1, 3.5, 'a'), row(2, 4, 'b')], { testBatchConfirmed: true });
-    dest.failNextWrite(new PauseError('blocked', 'vérification Cloudflare', { reason: 'challenge' }));
+    dest.failNextWrite(new PauseError('blocked', raw('vérification Cloudflare'), { reason: 'challenge' }));
 
     expect(await runUntilStopped('job1', { store, destination: dest.adapter, ctx: ctx() })).toBe('paused');
     expect((await store.getJob('job1'))?.pause).toMatchObject({ kind: 'blocked' });
@@ -215,13 +216,13 @@ describe('runWriteStep', () => {
     await runUntilStopped('job1', { store, destination: dest.adapter, ctx: ctx() });
     const r = await store.getRow('job1', 'ac-1');
     expect(r).toMatchObject({ status: 'failed', outcome: { verified: false } });
-    expect(r?.outcome?.message).toContain('non confirmée');
+    expect(render(r?.outcome?.message, 'fr')).toContain('non confirmée');
   });
 
   it('marque en échec une erreur HTTP sans arrêter le job', async () => {
     const dest = fakeDestination();
     await setup([row(1, 3.5, 'a'), row(2, 4, 'b')], { testBatchConfirmed: true });
-    dest.failNextWrite(new HttpError(400, 'requête refusée'));
+    dest.failNextWrite(new HttpError(400, raw('requête refusée')));
     expect(await runUntilStopped('job1', { store, destination: dest.adapter, ctx: ctx() })).toBe('done');
     expect(await statuses()).toEqual(['ac-1:failed', 'ac-2:done']);
   });

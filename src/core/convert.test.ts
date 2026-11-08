@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { convertRating, formatRating, isValidRating } from './convert';
+import { LocalizedError, msg } from './i18n';
 import { SCALES } from './scales';
 
 const { halfStarsOf5, integersOf10, halfPointsOf10 } = SCALES;
@@ -22,7 +23,7 @@ describe('convertRating', () => {
       value: 8,
       exact: false,
       raw: 7.5,
-      rule: 'arrondi au plus proche, demi vers le haut',
+      rule: msg('round.nearest'),
     });
   });
 
@@ -38,14 +39,14 @@ describe('convertRating', () => {
       value: 1,
       exact: false,
       raw: 0.5,
-      rule: 'ramenée dans les bornes 1–10',
+      rule: msg('round.clamped', { min: 1, max: 10 }),
     });
   });
 
   it("refuse une note hors de l'échelle d'origine", () => {
-    expect(() => convertRating(6, halfStarsOf5, integersOf10)).toThrow(RangeError);
-    expect(() => convertRating(3.3, halfStarsOf5, integersOf10)).toThrow(RangeError);
-    expect(() => convertRating(Number.NaN, halfStarsOf5, integersOf10)).toThrow(RangeError);
+    expect(() => convertRating(6, halfStarsOf5, integersOf10)).toThrow(LocalizedError);
+    expect(() => convertRating(3.3, halfStarsOf5, integersOf10)).toThrow(LocalizedError);
+    expect(() => convertRating(Number.NaN, halfStarsOf5, integersOf10)).toThrow(LocalizedError);
   });
 
   it('ne produit pas d’erreur flottante', () => {

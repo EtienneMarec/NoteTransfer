@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Candidate, WorkQuery } from '../adapter';
+import { msg } from '../i18n';
 import type { PivotWork } from '../pivot';
 import { normalizeTitle, titleSimilarity } from './normalize';
 import { decideMatch, scoreCandidate } from './score';
@@ -79,7 +80,7 @@ describe('decideMatch', () => {
       cand('b', { title: 'Les Misérables', year: 2019 }),
     ]);
     expect(d.confidence).toBe('review');
-    expect(d.reason).toBe('plusieurs candidats proches');
+    expect(d.reason).toEqual(msg('match.multipleClose'));
   });
 
   it('n’atteint jamais « sûr » sans année', () => {
@@ -107,11 +108,11 @@ describe('decideMatch', () => {
       cand('ok', { title: 'La Haine', externalIds: { imdb: 'tt0113247' } }),
       cand('ko', { title: 'Hate', year: 1995, externalIds: { imdb: 'tt9999999' } }),
     ]);
-    expect(d).toMatchObject({ confidence: 'sure', reason: 'identifiant externe identique' });
+    expect(d).toMatchObject({ confidence: 'sure', reason: msg('match.externalId') });
     expect(d.ranked.map((r) => r.candidate.ref.id)).toEqual(['ok']);
   });
 
   it('renvoie « introuvable » sans candidat', () => {
-    expect(decideMatch(laHaine, [])).toMatchObject({ confidence: 'not_found', reason: 'aucun candidat' });
+    expect(decideMatch(laHaine, [])).toMatchObject({ confidence: 'not_found', reason: msg('match.noCandidate') });
   });
 });

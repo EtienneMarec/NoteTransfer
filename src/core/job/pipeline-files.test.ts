@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import { render } from '../i18n';
 import { beforeEach, describe, expect, it } from 'vitest';
 import page1 from '../../adapters/allocine/__fixtures__/movies-seen-page1.json';
 import page2 from '../../adapters/allocine/__fixtures__/movies-seen-page2.json';
@@ -146,7 +147,7 @@ describe('AlloCiné → Letterboxd (fichier)', () => {
     const jobId = await prepare(allocine, entries);
     const rows = await store.getRows(jobId);
     expect(rows.every((r) => r.match?.confidence === 'review' && r.action === 'skip_review' && !r.selected)).toBe(true);
-    expect(rows[0]!.match?.reason).toMatch(/titre et année/);
+    expect(render(rows[0]!.match?.reason, 'fr')).toMatch(/titre et année/);
 
     await setRowsSelected(store, jobId, rows.map((r) => r.rowId), true);
     const selected = await selectedForImport(jobId);
