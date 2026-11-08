@@ -1,4 +1,4 @@
-import { LocalizedError, msg, type Lang, type Msg } from '../core/i18n';
+import { LocalizedError, msg, type Msg } from '../core/i18n';
 import type { SessionStatus } from '../core/adapter';
 import type { JobRow, TransferJob } from '../core/job/types';
 import type { PivotEntry, PlatformId } from '../core/pivot';
@@ -6,8 +6,6 @@ import type { PivotEntry, PlatformId } from '../core/pivot';
 export interface Settings {
   minDelayMs: number;
   maxDelayMs: number;
-  /** Langue de l'interface ; absente = langue du navigateur. */
-  language?: Lang;
   /** Date d'acceptation de l'avertissement CGU, par plateforme. */
   termsAccepted: Partial<Record<PlatformId, string>>;
 }

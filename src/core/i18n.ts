@@ -113,6 +113,7 @@ const CATALOG = {
   'err.invalidState': { fr: 'Opération impossible dans cet état', en: 'This action is not possible in the current state' },
   'err.jobRunning': { fr: 'Un transfert est déjà en cours', en: 'A transfer is already running' },
   'err.noFilmsInFile': { fr: 'Aucun film lu dans le fichier', en: 'No films found in the file' },
+  'err.permissionRefused': { fr: 'Autorisation refusée : l’extension ne peut pas accéder à ces sites.', en: 'Permission refused: the extension cannot access these sites.' },
   'err.noManualMode': { fr: '{platform} ne propose pas de mode « à la main »', en: '{platform} has no manual mode' },
   'err.urlNotRecognized': { fr: 'Adresse non reconnue pour {platform}', en: 'Address not recognized for {platform}' },
   'err.filmNotFoundAtUrl': { fr: 'Film introuvable à cette adresse', en: 'No film found at this address' },

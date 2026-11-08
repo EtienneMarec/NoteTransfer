@@ -3,16 +3,12 @@ import { destinationsFor, getAdapter, sources } from '../../adapters/registry';
 import { send, type Settings } from '../../background/messages';
 import type { SessionStatus } from '../../core/adapter';
 import type { RoundingMode } from '../../core/convert';
+import { errorMsg, LocalizedError, msg, type Msg } from '../../core/i18n';
 import type { PivotEntry, PlatformId } from '../../core/pivot';
-
-const SESSION_LABELS: Record<SessionStatus['state'], string> = {
-  ok: 'connecté',
-  signed_out: 'non connecté',
-  blocked: 'vérification anti-robot affichée',
-  needs_setup: 'autorisation nécessaire',
-};
+import { useI18n } from './i18n';
 
 export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void }) {
+  const { t, m, l, locale } = useI18n();
   const [source, setSource] = useState<PlatformId>(sources()[0]!.id);
   const dests = destinationsFor(source);
   const [destination, setDestination] = useState<PlatformId | undefined>(dests[0]?.id);
@@ -23,7 +19,7 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
   const [accepted, setAccepted] = useState(false);
   const [sessions, setSessions] = useState<Partial<Record<PlatformId, SessionStatus>>>();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<Msg>();
   const [file, setFile] = useState<{ name: string; entries: PivotEntry[] }>();
   const [writeMode, setWriteMode] = useState<'auto' | 'manual'>('auto');
 
@@ -61,10 +57,10 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
     if (!f || !src.parseExport) return;
     try {
       const entries = await src.parseExport({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
-      if (!entries.length) throw new Error('Aucun film trouvé dans ce fichier.');
+      if (!entries.length) throw new LocalizedError(msg('err.noFilmsInFile'));
       setFile({ name: f.name, entries });
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorMsg(e));
     }
   }
 
@@ -77,10 +73,10 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
     const granted = origins.length ? browser.permissions.request({ origins }) : Promise.resolve(true);
     void granted
       .then(async (ok) => {
-        if (!ok) throw new Error('Autorisation refusée : l’extension ne peut pas accéder à ces sites.');
+        if (!ok) throw new LocalizedError(msg('err.permissionRefused'));
         setSessions(await send({ type: 'checkSessions', platforms: online.map((a) => a.id) }));
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: unknown) => setError(errorMsg(e)))
       .finally(() => setBusy(false));
   }
 
@@ -107,7 +103,7 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
       });
       onCreated(jobId);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorMsg(e));
     } finally {
       setBusy(false);
     }
@@ -115,43 +111,42 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
 
   return (
     <section class="card">
-      <h2>Nouveau transfert</h2>
+      <h2>{t('app.newTransfer')}</h2>
       <div class="grid2">
         <label class="field">
-          Source
+          {t('new.source')}
           <select value={source} onChange={(e) => setSource((e.target as HTMLSelectElement).value as PlatformId)}>
             {sources().map((a) => (
               <option value={a.id}>{a.displayName}</option>
             ))}
           </select>
-          <span class="muted small">{src.capabilities.notes}</span>
+          <span class="muted small">{l(src.capabilities.notes)}</span>
         </label>
         <label class="field">
-          Destination
+          {t('new.destination')}
           <select value={destination} onChange={(e) => setDestination((e.target as HTMLSelectElement).value as PlatformId)}>
             {dests.map((a) => (
               <option value={a.id}>{a.displayName}</option>
             ))}
           </select>
-          <span class="muted small">{dst?.capabilities.notes}</span>
+          <span class="muted small">{l(dst?.capabilities.notes)}</span>
         </label>
       </div>
-      {!dests.length && <p class="notice warn">Aucune destination n’est encore disponible pour cette source.</p>}
+      {!dests.length && <p class="notice warn">{t('new.noDestination')}</p>}
 
       {fromFile && (
         <>
-          <h3>Fichier d’export {src.displayName}</h3>
-          <p class="muted small">{src.exportInstructions}</p>
+          <h3>{t('new.exportFile', { platform: src.displayName })}</h3>
+          <p class="muted small">{l(src.exportInstructions)}</p>
           <input
             type="file"
             accept={src.exportFileTypes}
             onChange={(e) => void readFile((e.target as HTMLInputElement).files?.[0])}
-            aria-label={`Fichier d’export ${src.displayName}`}
+            aria-label={t('new.exportFile', { platform: src.displayName })}
           />
           {file && (
             <p class="notice ok">
-              {file.entries.length} film(s) lu(s) dans {file.name}, dont {file.entries.filter((e) => e.rating).length} noté(s). Le fichier
-              est lu dans ce navigateur, sans être envoyé nulle part.
+              {t('new.fileRead', { count: file.entries.length, name: file.name, rated: file.entries.filter((e) => e.rating).length })}
             </p>
           )}
         </>
@@ -159,51 +154,46 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
 
       {bothModes && dst && (
         <>
-          <h3>Écriture sur {dst.displayName}</h3>
-          <div class="grid2" role="radiogroup" aria-label={`Mode d’écriture sur ${dst.displayName}`}>
+          <h3>{t('new.writeOn', { platform: dst.displayName })}</h3>
+          <div class="grid2" role="radiogroup" aria-label={t('new.writeMode', { platform: dst.displayName })}>
             <label class="check">
               <input type="radio" name="writeMode" checked={writeMode === 'auto'} onChange={() => setWriteMode('auto')} />
               <span>
-                <strong>Automatique</strong>
+                <strong>{t('new.auto')}</strong>
                 <br />
-                <span class="muted small">Par l’API interne du site, avec l’avertissement ci-dessous à accepter.</span>
+                <span class="muted small">{t('new.autoHelp')}</span>
               </span>
             </label>
             <label class="check">
               <input type="radio" name="writeMode" checked={writeMode === 'manual'} onChange={() => setWriteMode('manual')} />
               <span>
-                <strong>À la main</strong>
+                <strong>{t('new.manual')}</strong>
                 <br />
-                <span class="muted small">
-                  L’extension prépare la liste avec les liens et les notes ; vous notez vous-même sur le site. Aucune requête n’est envoyée à{' '}
-                  {dst.displayName}.
-                </span>
+                <span class="muted small">{t('new.manualHelp', { platform: dst.displayName })}</span>
               </span>
             </label>
           </div>
         </>
       )}
 
-      <h3>Options</h3>
+      <h3>{t('new.options')}</h3>
       <div class="grid2">
         {noSiteWrite ? (
           <p class="muted small">
-            {toFile
-              ? `${dst?.displayName} se remplit par son importeur officiel : l’extension génère le fichier, vous l’importez vous-même sur le site.`
-              : `Vous noterez vous-même sur ${dst?.displayName}, à partir de la liste préparée par l’extension.`}
+            {t(toFile ? 'new.importOnly' : 'new.manualOnly', { platform: dst?.displayName ?? '' })}
           </p>
         ) : (
           <>
             <label class="check">
               <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun((e.target as HTMLInputElement).checked)} />
               <span>
-                <strong>Mode simulation</strong>
+                <strong>{t('new.dryRun')}</strong>
                 <br />
-                <span class="muted small">Tout le parcours, sans aucune écriture sur la destination.</span>
+                <span class="muted small">{t('new.dryRunHelp')}</span>
               </span>
             </label>
             <label class="field">
-              Taille du lot de test
+              {t('new.batchSize')}
               <input
                 type="number"
                 min={1}
@@ -215,28 +205,26 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
           </>
         )}
         <label class="field">
-          Arrondi si la conversion est inexacte
+          {t('new.rounding')}
           <select value={rounding} onChange={(e) => setRounding((e.target as HTMLSelectElement).value as RoundingMode)}>
-            <option value="nearest">Au plus proche (demi vers le haut)</option>
-            <option value="down">Vers le bas</option>
-            <option value="up">Vers le haut</option>
+            <option value="nearest">{t('new.roundNearest')}</option>
+            <option value="down">{t('new.roundDown')}</option>
+            <option value="up">{t('new.roundUp')}</option>
           </select>
         </label>
       </div>
-      <p class="muted small">
-        Une note déjà présente sur la destination n’est jamais écrasée par défaut : vous choisirez ligne par ligne dans l’aperçu.
-      </p>
+      <p class="muted small">{t('new.neverOverwrite')}</p>
 
       {warned && warning && (
         <div class="notice warn">
-          <strong>Avertissement – {warned.displayName}</strong>
-          <p>{warning}</p>
+          <strong>{t('new.warning', { platform: warned.displayName })}</strong>
+          <p>{l(warning)}</p>
           {alreadyAccepted ? (
-            <p class="small">Accepté le {new Date(settings!.termsAccepted[warned.id]!).toLocaleString('fr-FR')}.</p>
+            <p class="small">{t('new.acceptedOn', { date: new Date(settings!.termsAccepted[warned.id]!).toLocaleString(locale) })}</p>
           ) : (
             <label class="check">
               <input type="checkbox" checked={accepted} onChange={(e) => setAccepted((e.target as HTMLInputElement).checked)} />
-              <span>J’ai compris et j’accepte ce risque pour mon compte.</span>
+              <span>{t('new.acceptRisk')}</span>
             </label>
           )}
         </div>
@@ -244,13 +232,11 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
 
       {online.length > 0 && (
         <>
-          <h3>Sessions</h3>
-          <p class="muted small">
-            L’extension utilise les sessions déjà ouvertes dans ce navigateur. Elle ne demande ni ne stocke aucun mot de passe.
-          </p>
+          <h3>{t('new.sessions')}</h3>
+          <p class="muted small">{t('new.sessionsHelp')}</p>
           <div class="row">
             <button onClick={checkSessions} disabled={busy || !dst}>
-              Autoriser l’accès et vérifier les sessions
+              {t('new.checkSessions')}
             </button>
             {sessions &&
               online.map(({ id: p }) => {
@@ -260,17 +246,17 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
                   <span>
                     {getAdapter(p).displayName} :{' '}
                     <span class={`badge ${s.state === 'ok' ? 'done' : 'failed'}`}>
-                      {SESSION_LABELS[s.state]}
+                      {t(`session.${s.state}`)}
                       {s.state === 'ok' && s.displayName ? ` (${s.displayName})` : ''}
                     </span>{' '}
                     {s.state === 'signed_out' && (
                       <a href={s.loginUrl} target="_blank" rel="noreferrer">
-                        se connecter
+                        {t('new.signIn')}
                       </a>
                     )}
                     {s.state === 'blocked' && s.url && (
                       <a href={s.url} target="_blank" rel="noreferrer">
-                        ouvrir le site
+                        {t('new.openSite')}
                       </a>
                     )}
                   </span>
@@ -280,13 +266,13 @@ export function NewTransfer({ onCreated }: { onCreated: (jobId: string) => void 
         </>
       )}
 
-      {error && <p class="notice bad">{error}</p>}
+      {error && <p class="notice bad">{m(error)}</p>}
 
       <div class="row" style={{ marginTop: '16px' }}>
         <button class="primary" disabled={busy || !sessionsOk || !termsOk || !sourceReady || !dst} onClick={() => void start()}>
-          {fromFile ? `Préparer le transfert vers ${dst?.displayName ?? '…'}` : `Lire mes notes ${src.displayName}`}
+          {fromFile ? t('new.prepare', { platform: dst?.displayName ?? '…' }) : t('new.read', { platform: src.displayName })}
         </button>
-        {!termsOk && <span class="muted small">Acceptez l’avertissement pour continuer.</span>}
+        {!termsOk && <span class="muted small">{t('new.acceptToContinue')}</span>}
       </div>
     </section>
   );

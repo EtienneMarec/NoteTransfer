@@ -2,28 +2,19 @@ import { useEffect, useState } from 'preact/hooks';
 import { getAdapter } from '../../adapters/registry';
 import { send, type Responses } from '../../background/messages';
 import { buildBackup, buildReport, summarize } from '../../core/export';
+import { errorMsg, type Msg } from '../../core/i18n';
 import { isWriteAction } from '../../core/job/plan';
 import { download, stampForFile } from './download';
+import { useI18n, type UiKey } from './i18n';
 import { ManualChecklist } from './ManualChecklist';
 import { Preview } from './Preview';
 
-const PHASE_LABELS = {
-  reading: 'Lecture des notes source',
-  matching: 'Recherche des correspondances',
-  review: 'Aperçu : à vérifier avant écriture',
-  running: 'Écriture en cours',
-  awaiting_confirmation: 'Lot de test terminé',
-  manual: 'À noter vous-même',
-  paused: 'En pause',
-  done: 'Terminé',
-  cancelled: 'Annulé',
-} as const;
-
 export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => void }) {
+  const { t, m, l, lang } = useI18n();
   const [state, setState] = useState<Responses['getJob']>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<Msg>();
   const [tick, setTick] = useState(0);
-  const [exportInfo, setExportInfo] = useState<string>();
+  const [exportInfo, setExportInfo] = useState<{ matched: number; total: number }>();
   const refresh = () => setTick((t) => t + 1);
 
   useEffect(() => {
@@ -31,7 +22,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
     const load = () =>
       send({ type: 'getJob', jobId }).then(
         (s) => alive && setState(s),
-        (e: Error) => alive && setError(e.message),
+        (e: unknown) => alive && setError(errorMsg(e)),
       );
     void load();
     const timer = setInterval(load, 1500);
@@ -41,7 +32,7 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
     };
   }, [jobId, tick]);
 
-  if (!state) return <section class="card">{error ? <p class="notice bad">{error}</p> : 'Chargement…'}</section>;
+  if (!state) return <section class="card">{error ? <p class="notice bad">{m(error)}</p> : t('job.loading')}</section>;
   const { job, rows } = state;
   const src = getAdapter(job.source);
   const dst = getAdapter(job.destination);
@@ -53,32 +44,30 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
   const fileDest = !manual && dst.capabilities.write === 'file';
   const act = (p: Promise<unknown>) => {
     setError(undefined);
-    p.then(refresh, (e: Error) => setError(e.message));
+    p.then(refresh, (e: unknown) => setError(errorMsg(e)));
   };
 
   /** Export actuel de la destination, pour retrouver les notes déjà présentes (fichier ou « à la main »). */
-  const existingExport = (why: string) =>
+  const existingExport = (why: UiKey) =>
     dst.parseExport && (
       <div class={`notice ${job.destinationExportAppliedAt ? 'ok' : 'warn'}`}>
         <p>
-          <strong>Notes déjà présentes sur {dst.displayName}.</strong> {why} Ajoutez votre export {dst.displayName} actuel pour les retrouver :
-          elles seront conservées, sauf choix contraire. Seules les correspondances sûres sont reconnues, et un film traduit différemment
-          peut échapper à la détection.
+          <strong>{t('job.existingTitle', { platform: dst.displayName })}</strong> {t(why)} {t('job.existingBody', { platform: dst.displayName })}
         </p>
-        <p class="muted small">{dst.exportInstructions}</p>
+        <p class="muted small">{l(dst.exportInstructions)}</p>
         <input
           type="file"
           accept={dst.exportFileTypes}
-          aria-label={`Export ${dst.displayName} actuel`}
+          aria-label={t('job.existingLabel', { platform: dst.displayName })}
           onChange={(e) => void applyExport((e.target as HTMLInputElement).files?.[0])}
         />
-        {exportInfo && <p>{exportInfo}</p>}
+        {exportInfo && <p>{t('job.existingInfo', { ...exportInfo, platform: dst.displayName })}</p>}
       </div>
     );
 
   function saveBackup() {
-    const b = buildBackup(job, rows);
-    const base = `notes-transfert-sauvegarde-${job.source}-${stampForFile()}`;
+    const b = buildBackup(job, rows, new Date(), lang);
+    const base = `${t('file.backup')}-${job.source}-${stampForFile()}`;
     download(`${base}.json`, b.json, 'application/json');
     download(`${base}.csv`, b.csv, 'text/csv;charset=utf-8');
     act(send({ type: 'markBackupSaved', jobId }));
@@ -91,10 +80,10 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
     try {
       const entries = await dst.parseExport({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
       const { matched } = await send({ type: 'applyDestinationExport', jobId, entries });
-      setExportInfo(`${matched} film(s) déjà noté(s) sur ${dst.displayName} retrouvé(s) parmi ${entries.filter((e) => e.rating).length} note(s) de l’export.`);
+      setExportInfo({ matched, total: entries.filter((e) => e.rating).length });
       refresh();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorMsg(e));
     }
   }
 
@@ -110,8 +99,8 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
   }
 
   function saveReport() {
-    const r = buildReport(job, rows);
-    const base = `notes-transfert-rapport-${stampForFile()}`;
+    const r = buildReport(job, rows, new Date(), lang);
+    const base = `${t('file.report')}-${stampForFile()}`;
     download(`${base}.json`, r.json, 'application/json');
     download(`${base}.csv`, r.csv, 'text/csv;charset=utf-8');
   }
@@ -128,22 +117,22 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
       <section class="card">
         <div class="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>
-            {src.displayName} → {dst.displayName} {job.dryRun && <span class="badge review">simulation</span>}
+            {src.displayName} → {dst.displayName} {job.dryRun && <span class="badge review">{t('job.simulation')}</span>}
           </h2>
           <div class="row">
             {(job.phase === 'reading' || job.phase === 'matching' || job.phase === 'running') && (
-              <button onClick={() => act(send({ type: 'pause', jobId }))}>Pause</button>
+              <button onClick={() => act(send({ type: 'pause', jobId }))}>{t('job.pause')}</button>
             )}
             {job.phase !== 'done' && job.phase !== 'cancelled' && (
-              <button class="danger" onClick={() => confirm('Annuler ce transfert ?') && act(send({ type: 'cancel', jobId }))}>
-                Annuler
+              <button class="danger" onClick={() => confirm(t('job.cancelConfirm')) && act(send({ type: 'cancel', jobId }))}>
+                {t('job.cancel')}
               </button>
             )}
-            <button onClick={onClosed}>Fermer</button>
+            <button onClick={onClosed}>{t('job.close')}</button>
           </div>
         </div>
         <p>
-          <strong>{PHASE_LABELS[job.phase]}</strong>
+          <strong>{t(`phase.${job.phase}`)}</strong>
         </p>
         {(job.phase === 'reading' || job.phase === 'matching' || job.phase === 'running') && (
           <>
@@ -151,25 +140,25 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
               <div style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
             <p class="muted small">
-              {job.phase === 'reading' && `${rows.length} film(s) lu(s)${job.readTotal ? ` sur ${job.readTotal}` : ''}`}
-              {job.phase === 'matching' && `${matched} / ${rows.length} film(s) recherché(s) sur ${dst.displayName}`}
-              {job.phase === 'running' && `${finished} / ${toWrite.length} note(s) traitée(s)`}
-              {' · '}requêtes espacées de quelques secondes, une à la fois.
+              {job.phase === 'reading' && (job.readTotal ? t('job.readOf', { count: rows.length, total: job.readTotal }) : t('job.read', { count: rows.length }))}
+              {job.phase === 'matching' && t('job.matching', { done: matched, total: rows.length, platform: dst.displayName })}
+              {job.phase === 'running' && t('job.running', { done: finished, total: toWrite.length })}
+              {' · '}{t('job.spaced')}
             </p>
           </>
         )}
 
         {job.phase === 'paused' && job.pause && (
           <div class={`notice ${job.pause.kind === 'user' ? 'warn' : 'bad'}`}>
-            <p>{job.pause.message}</p>
+            <p>{m(job.pause.message)}</p>
             {job.pause.kind === 'blocked' && (
               <p>
-                Ouvrez {job.pause.url ? <a href={job.pause.url} target="_blank" rel="noreferrer">le site</a> : 'le site'}, résolvez la vérification
-                vous-même, puis cliquez sur Reprendre. L’extension ne contourne jamais ces protections.
+                {t('job.pauseOpen')} {job.pause.url ? <a href={job.pause.url} target="_blank" rel="noreferrer">{t('job.pauseTheSite')}</a> : t('job.pauseTheSite')}
+                {t('job.pauseSolve')}
               </p>
             )}
-            {job.pause.kind === 'signed_out' && <p>Reconnectez-vous au site dans ce navigateur, puis cliquez sur Reprendre.</p>}
-            {job.pause.kind !== 'adapter_outdated' && <button onClick={() => act(send({ type: 'resume', jobId }))}>Reprendre</button>}
+            {job.pause.kind === 'signed_out' && <p>{t('job.pauseSignedOut')}</p>}
+            {job.pause.kind !== 'adapter_outdated' && <button onClick={() => act(send({ type: 'resume', jobId }))}>{t('job.resume')}</button>}
           </div>
         )}
 
@@ -177,40 +166,37 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
           <div class="stats">
             <div>
               <strong>{rows.length}</strong>
-              <span class="muted small">films lus</span>
+              <span class="muted small">{t('stats.read')}</span>
             </div>
             <div>
               <strong>{toWrite.length}</strong>
-              <span class="muted small">à écrire</span>
+              <span class="muted small">{t('stats.toWrite')}</span>
             </div>
             <div>
               <strong>{summary.done}</strong>
-              <span class="muted small">{job.dryRun ? 'simulés' : 'réussis'}</span>
+              <span class="muted small">{t(job.dryRun ? 'stats.simulated' : 'stats.done')}</span>
             </div>
             <div>
               <strong>{summary.failed}</strong>
-              <span class="muted small">échecs</span>
+              <span class="muted small">{t('stats.failed')}</span>
             </div>
             <div>
               <strong>{summary.skipped}</strong>
-              <span class="muted small">ignorés</span>
+              <span class="muted small">{t('stats.skipped')}</span>
             </div>
           </div>
         )}
 
         {job.phase === 'review' && fileDest && (
           <>
-            <h3>Fichier d’import {dst.displayName}</h3>
-            {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}
-            <p class="muted small">
-              Les lignes « à vérifier » seront rapprochées par {dst.displayName} sur le titre et l’année : cochez celles que vous voulez inclure
-              (filtre « À vérifier », puis « Valider les lignes affichées »).
-            </p>
-            {existingExport(`Son importeur remplace une note existante sans prévenir.`)}
+            <h3>{t('job.importFile', { platform: dst.displayName })}</h3>
+            {dst.capabilities.writeSideEffects && <p class="notice warn">{l(dst.capabilities.writeSideEffects)}</p>}
+            <p class="muted small">{t('job.importHelp', { platform: dst.displayName })}</p>
+            {existingExport('job.importerOverwrites')}
             <div class="row">
-              <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
+              <button onClick={saveBackup}>{t('job.backupOptional')}</button>
               <button class="primary" disabled={!toWrite.length} onClick={generateImport}>
-                Générer le fichier d’import ({toWrite.length} film(s))
+                {t('job.generateImport', { count: toWrite.length })}
               </button>
             </div>
           </>
@@ -218,13 +204,13 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
 
         {job.phase === 'review' && manual && (
           <>
-            <h3>Liste à noter vous-même sur {dst.displayName}</h3>
-            <p class="muted small">{dst.manualWrite?.instructions}</p>
-            {existingExport(`Sinon, la liste vous proposera aussi des films que vous avez déjà notés.`)}
+            <h3>{t('job.manualList', { platform: dst.displayName })}</h3>
+            <p class="muted small">{l(dst.manualWrite?.instructions)}</p>
+            {existingExport('job.manualWhy')}
             <div class="row">
-              <button onClick={saveBackup}>Télécharger la sauvegarde (facultatif)</button>
+              <button onClick={saveBackup}>{t('job.backupOptional')}</button>
               <button class="primary" disabled={!toWrite.length} onClick={() => act(send({ type: 'startManual', jobId }))}>
-                Commencer la liste ({toWrite.length} film(s))
+                {t('job.startList', { count: toWrite.length })}
               </button>
             </div>
           </>
@@ -237,40 +223,38 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
         {job.phase === 'done' && fileDest && dst.importInstructions && (
           <div class="notice ok">
             <p>
-              <strong>Dernière étape, sur {dst.displayName} :</strong>
+              <strong>{t('job.lastStep', { platform: dst.displayName })}</strong>
             </p>
-            <p>{dst.importInstructions}</p>
-            <button onClick={() => downloadImport()}>Télécharger à nouveau le fichier d’import</button>
+            <p>{l(dst.importInstructions)}</p>
+            <button onClick={() => downloadImport()}>{t('job.redownload')}</button>
           </div>
         )}
 
         {job.phase === 'review' && !fileDest && !manual && (
           <>
-            <h3>Avant d’écrire</h3>
-            {dst.capabilities.writeSideEffects && <p class="notice warn">{dst.capabilities.writeSideEffects}</p>}
+            <h3>{t('job.beforeWrite')}</h3>
+            {dst.capabilities.writeSideEffects && <p class="notice warn">{l(dst.capabilities.writeSideEffects)}</p>}
             <div class="row">
               <label class="field">
-                Conflits (note différente déjà présente)
+                {t('job.conflicts')}
                 <select
                   value={job.conflictPolicy}
                   onChange={(e) =>
                     act(send({ type: 'setConflictPolicy', jobId, policy: (e.target as HTMLSelectElement).value as 'keep' | 'overwrite' }))
                   }
                 >
-                  <option value="keep">Conserver la note existante (recommandé)</option>
-                  <option value="overwrite">Écraser avec la note source</option>
+                  <option value="keep">{t('job.keep')}</option>
+                  <option value="overwrite">{t('job.overwrite')}</option>
                 </select>
               </label>
             </div>
             <ol>
               <li>
-                <button onClick={saveBackup}>Télécharger la sauvegarde (JSON + CSV)</button>{' '}
+                <button onClick={saveBackup}>{t('job.backup')}</button>{' '}
                 {job.backupSavedAt ? (
-                  <span class="badge done">enregistrée</span>
+                  <span class="badge done">{t('job.backupSaved')}</span>
                 ) : (
-                  <span class="muted small">
-                    {job.dryRun ? 'facultative en simulation' : 'obligatoire'} : notes source et notes {dst.displayName} qui seraient écrasées.
-                  </span>
+                  <span class="muted small">{t(job.dryRun ? 'job.backupHintDry' : 'job.backupHintReal', { platform: dst.displayName })}</span>
                 )}
               </li>
               <li>
@@ -278,11 +262,11 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
                   class="primary"
                   disabled={!toWrite.length || (!job.dryRun && !job.backupSavedAt)}
                   onClick={() =>
-                    (job.dryRun || confirm(`Écrire réellement ${Math.min(job.testBatchSize, toWrite.length)} note(s) sur ${dst.displayName} ?`)) &&
+                    (job.dryRun || confirm(t('job.confirmWrite', { count: Math.min(job.testBatchSize, toWrite.length), platform: dst.displayName }))) &&
                     act(send({ type: 'startWriting', jobId }))
                   }
                 >
-                  {job.dryRun ? 'Simuler' : 'Écrire'} le lot de test ({Math.min(job.testBatchSize, toWrite.length)} film(s))
+                  {t(job.dryRun ? 'job.simulateBatch' : 'job.writeBatch', { count: Math.min(job.testBatchSize, toWrite.length) })}
                 </button>
               </li>
             </ol>
@@ -291,17 +275,15 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
 
         {job.phase === 'awaiting_confirmation' && (
           <div class="notice ok">
-            <p>
-              Le lot de test est terminé. Vérifiez les résultats ci-dessous{!job.dryRun && ` et sur ${dst.displayName}`}, puis continuez.
-            </p>
+            <p>{t(job.dryRun ? 'job.batchDone' : 'job.batchDoneReal', { platform: dst.displayName })}</p>
             <button
               class="primary"
               onClick={() =>
-                (job.dryRun || confirm(`Écrire les ${toWrite.length - finished} note(s) restantes sur ${dst.displayName} ?`)) &&
+                (job.dryRun || confirm(t('job.confirmRest', { count: toWrite.length - finished, platform: dst.displayName }))) &&
                 act(send({ type: 'confirmTestBatch', jobId }))
               }
             >
-              Continuer ({toWrite.length - finished} restante(s))
+              {t('job.continue', { count: toWrite.length - finished })}
             </button>
           </div>
         )}
@@ -309,10 +291,10 @@ export function JobView({ jobId, onClosed }: { jobId: string; onClosed: () => vo
         {(job.phase === 'done' || job.phase === 'awaiting_confirmation' || job.phase === 'cancelled' || job.phase === 'paused' || job.phase === 'manual') &&
           rows.length > 0 && (
           <p>
-            <button onClick={saveReport}>Exporter le rapport (JSON + CSV)</button>
+            <button onClick={saveReport}>{t('job.exportReport')}</button>
           </p>
         )}
-        {error && <p class="notice bad">{error}</p>}
+        {error && <p class="notice bad">{m(error)}</p>}
       </section>
 
       {rows.length > 0 && job.phase !== 'reading' && (
