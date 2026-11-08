@@ -8,7 +8,7 @@ Open-source browser extension (Manifest V3, Chrome and Firefox) that transfers y
 
 > **Status: version 1.0.** The AlloCiné → SensCritique flow is complete and was tested in Firefox on real accounts: a full dry run, then a first real write, verified on the site. IMDb → AlloCiné was also tested in Firefox on test accounts. Not yet tested in Chrome, nor on a real transfer of many films. See [docs/verification.md](docs/verification.md).
 >
-> The extension's interface is in French, so buttons are quoted below in French with an English translation.
+> The interface is available in English and French. It follows your browser's language by default; change it with the selector at the top of the app. Files, reports and past transfers follow the chosen language too.
 
 ## Platforms
 
@@ -34,7 +34,7 @@ Details for each platform (methods, authentication, pagination, rating scale, li
 
   An IMDb rating of 0 would delete the rating: the extension only sends ratings from 1 to 10.
 - **Files** are read in the browser and never sent anywhere.
-- AlloCiné, SensCritique and IMDb writing rely on undocumented internal APIs: a change on the site can break the adapter. The extension then pauses with an "adapter outdated" message (« adaptateur obsolète ») instead of continuing.
+- AlloCiné, SensCritique and IMDb writing rely on undocumented internal APIs: a change on the site can break the adapter. The extension then pauses and says the site changed its API, instead of continuing.
 - If a site shows a CAPTCHA or an anti-bot check, the transfer pauses and lets you know. The extension never bypasses these protections.
 
 ## Installation (developer mode)
@@ -64,23 +64,23 @@ A temporary Firefox add-on is removed when the browser closes. For a **permanent
 
 1. Sign in to the platforms as usual in this browser (for example AlloCiné and SensCritique).
 2. Click the extension icon: the app opens in a tab.
-3. Choose the source and the destination. **Dry-run mode** (« Mode simulation ») is on by default.
-4. Click « Autoriser l'accès et vérifier les sessions » (allow access and check sessions). The browser asks for access to those sites, and only those.
+3. Choose the source and the destination. **Dry-run mode** is on by default.
+4. Click "Allow access and check sessions". The browser asks for access to those sites, and only those.
 5. Read and accept the AlloCiné warning, then start reading. Requests are sent one at a time, 2 to 4 seconds apart (configurable).
 6. In the **preview**, check each row: film, source rating, converted rating, existing rating, confidence and planned action.
-   - Rows « à vérifier » (to check) are unticked: tick them to approve, or fix the match (list of candidates, or a pasted title-page URL).
+   - Rows marked "to check" are unticked: tick them to approve, or fix the match (list of candidates, or a pasted title-page URL).
    - Conflicts are kept by default: tick a row to overwrite it, or change the global rule.
 7. Download the **backup** (JSON + CSV). It is required before any real write.
-8. Run the **test batch** (3 films by default), check the result, then click « Continuer » (continue).
+8. Run the **test batch** (3 films by default), check the result, then click "Continue".
 9. Export the final **report** (JSON + CSV): successes, skipped, failures and reasons.
 
 **From a file** (IMDb or Letterboxd as source): at step 3, choose the indicated export file; there is no session to check for that platform.
-**To Letterboxd**: instead of steps 7 and 8, click « Générer le fichier d'import » (generate the import file), then follow the on-screen instructions to import it on the site.
-**Manual mode** (AlloCiné or IMDb as destination, option « À la main »): the extension sends nothing to the destination; after the preview, click « Commencer la liste » (start the list), open each link, rate the film yourself, then mark it « Fait » (done) or « Sauter » (skip).
+**To Letterboxd**: instead of steps 7 and 8, click "Generate the import file", then follow the on-screen instructions to import it on the site.
+**Manual mode** (AlloCiné or IMDb as destination, "Manual" option): the extension sends nothing to the destination; after the preview, click "Start the list", open each link, rate the film yourself, then mark it "Done" or "Skip".
 
-You can pause and resume at any time. After the browser is closed, the transfer is paused: click « Reprendre » (resume). Every row that was in progress is checked again on the site before any new attempt, which prevents duplicates.
+You can pause and resume at any time. After the browser is closed, the transfer is paused: click "Resume". Every row that was in progress is checked again on the site before any new attempt, which prevents duplicates.
 
-**« Tout supprimer »** (delete everything, at the top of the app) erases transfers, remembered matches and settings, then removes the extension's access to the sites.
+**"Delete everything"** (at the top of the app) erases transfers, remembered matches, settings and the language choice, then removes the extension's access to the sites.
 
 ## Rating conversion
 

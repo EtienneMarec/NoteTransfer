@@ -37,6 +37,7 @@ L'interface complète est dans `src/core/adapter.ts`. Les points essentiels :
 | `capabilities.scale` | Échelle native (`min`, `max`, `step`). La conversion est faite par le noyau. |
 | `capabilities.termsWarning` | Avertissement bloquant à accepter avant le premier usage. |
 | `capabilities.writeSideEffects` | Effets de bord d'une écriture, affichés dans l'aperçu. |
+| Textes affichés (`notes`, `termsWarning`, `writeSideEffects`, consignes) | Type `Localized` : `{ fr, en }`. Les erreurs et raisons passent par `msg(clé, paramètres)` de `core/i18n.ts`. Un test échoue si une langue manque. |
 | `site` | Pour `'site'` : page d'accueil, motifs d'onglet, cookie et en-tête d'authentification. Les requêtes sont exécutées depuis un onglet du site ; le jeton ne quitte jamais l'onglet. |
 | `checkSession` | `ok`, `signed_out` (avec lien de connexion), `blocked` ou `needs_setup`. |
 | `readRatings(ctx, cursor)` | Une page à la fois, avec un curseur sérialisable, pour reprendre après une suspension du service worker. |

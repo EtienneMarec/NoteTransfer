@@ -70,6 +70,18 @@ Transfert réel lancé par l'utilisateur dans Firefox : une seule ligne en confl
 | Notes identiques ignorées (Moi, moche et méchant, Blair Witch) | ✅ « ignoré : déjà identique » |
 | Rapport CSV exporté | ✅ colonnes et contenu corrects, aucun identifiant utilisateur ni jeton |
 
+## Choix de la langue, français ou anglais (2026-11-08)
+
+| Point | Résultat |
+|---|---|
+| Catalogues du moteur et de l'interface : chaque texte dans les deux langues, mêmes paramètres ; textes des adaptateurs fournis en deux langues | 🧪 tests |
+| Rapport et sauvegarde CSV en anglais et en français pour un même transfert | 🧪 tests |
+| Page compilée, avec un faux service d'arrière-plan et de fausses données, dans le navigateur intégré : bascule FR/EN, retraduction d'un transfert existant, ancien message stocké en texte conservé, choix gardé après rechargement, aucune erreur console | 🧪 page réelle, extension non chargée |
+| Extension chargée dans Firefox avec le sélecteur de langue | ⏳ |
+| Description du manifeste selon la langue du navigateur (`_locales`) | ✅ compile, ⏳ affichage non vérifié |
+
+Les messages d'erreur renvoyés tels quels par un site restent dans la langue du site.
+
 ## Pas encore vérifié
 
 | Point | Pourquoi |
